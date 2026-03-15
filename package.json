@@ -15,7 +15,8 @@
     "compile": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "ts": "ts-node",
-    "cli": "node --loader ts-node/esm ./src/main.cli.ts"
+    "cli": "node --no-warnings --loader ts-node/esm src/main.cli.ts",
+    "mock:server": "json-server ./mocks/mock-server-data.json --port 3123"
   },
   "devDependencies": {
     "@types/node": "18.16.3",
@@ -23,8 +24,10 @@
     "@typescript-eslint/parser": "5.46.0",
     "eslint": "^8.39.0",
     "eslint-config-htmlacademy": "9.1.1",
+    "json-server": "^0.17.4",
     "rimraf": "3.0.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^4.9.5"
   },
   "type": "module",
@@ -33,6 +36,9 @@
     "npm": ">=8"
   },
   "dependencies": {
-    "chalk": "^5.6.2"
+    "chalk": "^5.6.2",
+    "dayjs": "^1.11.19",
+    "generate-password": "^1.7.1",
+    "got": "^14.6.6"
   }
 }
