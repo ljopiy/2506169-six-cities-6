@@ -5,6 +5,7 @@
 /dist/
 /docs/
 .idea/*
+.env-example
 
 .DS_Store
 coverage

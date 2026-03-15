@@ -1,4 +1,5 @@
 import got from 'got';
+import chalk from 'chalk';
 import { Command } from './command.interface.js';
 import { MockServerData } from '../../shared/types/index.js';
 import { TSVOfferGenerator } from '../../shared/libs/offer-generation/tsv-offer-generatoк.js';
@@ -29,17 +30,17 @@ export class GenerateCommand implements Command {
     return '--generate';
   }
 
-  public async execute(...parameters: string[]): Promise<void> {
-    const [count, filepath, url] = parameters;
+  public async execute(...params: string[]): Promise<void> {
+    const [count, filepath, url] = params;
     const offerCount = Number.parseInt(count, 10);
 
     try {
       await this.load(url);
       await this.write(filepath, offerCount);
-      console.info(`File ${filepath} was created!`);
+      console.info(chalk.greenBright(`File ${filepath} was created!`));
     } catch (error: unknown) {
-      console.error('Can\'t generate data');
-      console.error(getErrorMessage(error));
+      console.error(chalk.red('Can\'t generate data'));
+      console.error(chalk.red(getErrorMessage(error)));
     }
   }
 }
