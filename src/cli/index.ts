@@ -4,4 +4,5 @@ export * from './commands/import.command.js';
 export * from './commands/version.command.js';
 export * from './commands/generate.command.js';
 export * from './command-parser.js';
+export * from './cli.container.js';
 

@@ -1,4 +1,5 @@
 import got from 'got';
+import { injectable } from 'inversify';
 import chalk from 'chalk';
 import { Command } from './command.interface.js';
 import { MockServerData } from '../../shared/types/index.js';
@@ -6,6 +7,7 @@ import { TSVOfferGenerator } from '../../shared/libs/offer-generation/tsv-offer-
 import { getErrorMessage } from '../../shared/helpers/common.js';
 import { TSVFileWriter } from '../../shared/libs/file-writer/tsv-file-writer.js';
 
+@injectable()
 export class GenerateCommand implements Command {
   private initialData: MockServerData;
 

@@ -2,30 +2,27 @@ import { Command } from './command.interface.js';
 import { TSVFileReader } from '../../shared/libs/file-reader/index.js';
 import { createOffer, getMongoURI } from '../../shared/helpers/index.js';
 import { UserService } from '../../shared/modules/user/user-service.interface.js';
-import { DefaultOfferService, OfferModel, OfferService } from '../../shared/modules/offer/index.js';
-import { DatabaseClient, MongoDatabaseClient } from '../../shared/libs/database-client/index.js';
+import { OfferService } from '../../shared/modules/offer/index.js';
+import { DatabaseClient } from '../../shared/libs/database-client/index.js';
 import { Logger } from '../../shared/libs/logger/index.js';
-import { ConsoleLogger } from '../../shared/libs/logger/console.logger.js';
-import { DefaultUserService, UserModel } from '../../shared/modules/user/index.js';
 import { DEFAULT_DB_PORT, DEFAULT_USER_PASSWORD } from './command.constans.js';
 import { Offer } from '../../shared/types/index.js';
+import { inject, injectable } from 'inversify';
+import { Component } from '../../shared/types/index.js';
 
+@injectable()
 export class ImportCommand implements Command {
 
-  private readonly userService: UserService;
-  private readonly offerService: OfferService;
-  private readonly databaseClient: DatabaseClient;
-  private readonly logger: Logger;
   private salt!: string;
 
-  constructor() {
+  constructor(
+    @inject(Component.Logger) private readonly logger: Logger,
+    @inject(Component.OfferService) private readonly offerService: OfferService,
+    @inject(Component.UserService) private readonly userService: UserService,
+    @inject(Component.DatabaseClient) private readonly databaseClient: DatabaseClient,
+  ) {
     this.onImportedLine = this.onImportedLine.bind(this);
     this.onCompleteImport = this.onCompleteImport.bind(this);
-
-    this.logger = new ConsoleLogger();
-    this.userService = new DefaultUserService(this.logger, UserModel);
-    this.offerService = new DefaultOfferService(this.logger, OfferModel);
-    this.databaseClient = new MongoDatabaseClient(this.logger);
   }
 
   public getName(): string {

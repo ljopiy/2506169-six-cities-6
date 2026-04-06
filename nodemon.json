@@ -1,0 +1,7 @@
+{
+  "watch": [
+    "src"
+  ],
+  "ext": "ts, json",
+  "exec": "node --no-warnings --loader ts-node/esm ./src/main.rest.ts | pino-pretty --colorize --translateTime SYS:standard"
+}
