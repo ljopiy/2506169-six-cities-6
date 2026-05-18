@@ -5,6 +5,8 @@ import { CreateUserDto } from './dto/create-user.dto.js';
 export interface UserService {
   create(dto: CreateUserDto, salt: string): Promise<DocumentType<UserEntity>>;
   findById(userId: string): Promise<DocumentType<UserEntity> | null>;
+  exists(documentId: string): Promise<boolean>;
   findByEmail(email: string): Promise<DocumentType<UserEntity> | null>;
   findOrCreate(dto: CreateUserDto, salt: string): Promise<DocumentType<UserEntity>>;
+  updateAvatarById(userId: string, avatarPath: string): Promise<DocumentType<UserEntity> | null>;
 }

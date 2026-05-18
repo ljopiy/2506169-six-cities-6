@@ -1,16 +1,25 @@
 import { inject, injectable } from 'inversify';
 import { Response, Request } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { BaseController, HttpError, HttpMethod, ValidateDtoMiddleware } from '../../libs/rest/index.js';
+import {
+  BaseController,
+  DocumentExistsMiddleware,
+  HttpError,
+  HttpMethod,
+  UploadFileMiddleware,
+  ValidateDtoMiddleware,
+  ValidateObjectIdMiddleware
+} from '../../libs/rest/index.js';
 import { Logger } from '../../libs/logger/index.js';
 import { Component } from '../../types/index.js';
 import { UserService } from './user-service.interface.js';
 import { Config, RestSchema } from '../../libs/config/index.js';
 import { LoginUserRequest } from './types/login-user-request.type.js';
 import { CreateUserRequest } from './types/create-user-request.type.js';
+import { ParamUserId } from './types/param-userid.type.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
-import { createSHA256, fillDTO } from '../../helpers/index.js';
+import { createSHA256, fillDTO, prepareUser } from '../../helpers/index.js';
 import { UserRdo } from './rdo/user.rdo.js';
 
 @injectable()
@@ -39,6 +48,16 @@ export class UserController extends BaseController {
         new ValidateDtoMiddleware(LoginUserDto)
       ]
     });
+    this.addRoute({
+      path: '/:userId/avatar',
+      method: HttpMethod.Post,
+      handler: this.uploadAvatar,
+      middlewares: [
+        new ValidateObjectIdMiddleware('userId'),
+        new UploadFileMiddleware(this.configService.get('UPLOAD_DIRECTORY'), 'avatar'),
+        new DocumentExistsMiddleware(this.userService, 'User', 'userId'),
+      ]
+    });
     this.addRoute({ path: '/logout', method: HttpMethod.Post, handler: this.logout });
     this.addRoute({ path: '/profile', method: HttpMethod.Get, handler: this.profile });
   }
@@ -58,7 +77,7 @@ export class UserController extends BaseController {
     }
 
     const result = await this.userService.create(body, this.configService.get('SALT'));
-    this.created(res, fillDTO(UserRdo, result));
+    this.created(res, fillDTO(UserRdo, prepareUser(result)));
   }
 
   public async login(
@@ -112,7 +131,36 @@ export class UserController extends BaseController {
       );
     }
 
-    this.ok(res, fillDTO(UserRdo, existsUser));
+    this.ok(res, fillDTO(UserRdo, prepareUser(existsUser)));
+  }
+
+  public async uploadAvatar(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    const params = req.params as ParamUserId;
+    const userId = this.extractParam(params.userId, 'userId');
+
+    if (!req.file) {
+      throw new HttpError(
+        StatusCodes.BAD_REQUEST,
+        'Avatar file is required',
+        'UserController',
+      );
+    }
+
+    const avatarPath = `/upload/${req.file.filename}`;
+    const updatedUser = await this.userService.updateAvatarById(userId, avatarPath);
+
+    if (!updatedUser) {
+      throw new HttpError(
+        StatusCodes.NOT_FOUND,
+        `User with id ${userId} not found.`,
+        'UserController',
+      );
+    }
+
+    this.ok(res, fillDTO(UserRdo, prepareUser(updatedUser)));
   }
 
   private getUserId(req: Request): string {
@@ -128,5 +176,19 @@ export class UserController extends BaseController {
     }
 
     return value;
+  }
+
+  private extractParam(param: unknown, name: string): string {
+    const value = Array.isArray(param) ? param[0] : param;
+
+    if (typeof value !== 'string') {
+      throw new HttpError(
+        StatusCodes.BAD_REQUEST,
+        `${name} is invalid`,
+        'UserController',
+      );
+    }
+
+    return value.trim();
   }
 }
