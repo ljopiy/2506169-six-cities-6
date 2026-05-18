@@ -26,7 +26,7 @@ Content-Type: application/json
     "Kitchen",
     "Heating"
   ],
-  "authorId": "62711a50b0e24a624d49ffdc",
+  "authorId": "6a0afa6767ac70914fb8a75d",
   "commentsCount": 0,
   "coordinates": {
     "latitude": 52.520008,
@@ -42,17 +42,17 @@ GET http://localhost:4000/offers HTTP/1.1
 ###
 
 ## Получить объявление по идентификатору
-GET http://localhost:4000/offers/62711a50b0e24a624d49ffdc HTTP/1.1
+GET http://localhost:4000/offers/6a0afba967ac70914fb8a75e HTTP/1.1
 
 ###
 
 ## Удалить объявление по идентификатору
-DELETE http://localhost:4000/offers/62711a50b0e24a624d49ffdc HTTP/1.1
+DELETE http://localhost:4000/offers/6a0afba967ac70914fb8a75e HTTP/1.1
 
 ###
 
 ## Изменить объявление по идентификатору
-PATCH http://localhost:4000/offers/62711a50b0e24a624d49ffdc HTTP/1.1
+PATCH http://localhost:4000/offers/6a0afba967ac70914fb8a75e HTTP/1.1
 Content-Type: application/json
 
 {
@@ -99,11 +99,11 @@ GET http://localhost:4000/offers/favorite HTTP/1.1
 ###
 
 ## Добавить объявление в избранные
-POST http://localhost:4000/offers/favorite/62711a50b0e24a624d49ffdc HTTP/1.1
+POST http://localhost:4000/offers/favorite/6a0afba967ac70914fb8a75e HTTP/1.1
 
 ###
 
 ## Удалить объявление из избранных
-DELETE http://localhost:4000/offers/favorite/62711a50b0e24a624d49ffdc HTTP/1.1
+DELETE http://localhost:4000/offers/favorite/6a0afba967ac70914fb8a75e HTTP/1.1
 
 ###

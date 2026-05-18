@@ -3,7 +3,7 @@ import { CommentService } from './comment-service.interface.js';
 import { Component, SortType } from '../../types/index.js';
 import { DocumentType, types } from '@typegoose/typegoose';
 import { CommentEntity } from './comment.entity.js';
-import { CreateCommentDto } from './dto/create-comment.dto.js';
+import { CreateCommentServiceDto } from './dto/create-comment.dto.js';
 import { DEFAULT_COMMENT_COUNT } from './comment.constant.js';
 
 @injectable()
@@ -12,7 +12,7 @@ export class DefaultCommentService implements CommentService {
     @inject(Component.CommentModel) private readonly commentModel: types.ModelType<CommentEntity>,
   ) { }
 
-  public async create(dto: CreateCommentDto): Promise<DocumentType<CommentEntity>> {
+  public async create(dto: CreateCommentServiceDto): Promise<DocumentType<CommentEntity>> {
     const result = await this.commentModel.create(dto);
     return result.populate('authorId');
   }
