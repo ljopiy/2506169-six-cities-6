@@ -31,6 +31,10 @@ export class DefaultUserService implements UserService {
     return this.userModel.findById(id).exec();
   }
 
+  public async exists(documentId: string): Promise<boolean> {
+    return (await this.userModel.exists({ _id: documentId })) !== null;
+  }
+
   public async findOrCreate(dto: CreateUserDto, salt: string): Promise<DocumentType<UserEntity>> {
     const existedUser = await this.findByEmail(dto.email);
 
@@ -39,5 +43,9 @@ export class DefaultUserService implements UserService {
     }
 
     return this.create(dto, salt);
+  }
+
+  public async updateAvatarById(userId: string, avatarPath: string): Promise<DocumentType<UserEntity> | null> {
+    return this.userModel.findByIdAndUpdate(userId, { avatarPath }, { new: true }).exec();
   }
 }

@@ -7,6 +7,7 @@
 .idea/*
 .env-example
 .env
+upload/
 
 .DS_Store
 coverage

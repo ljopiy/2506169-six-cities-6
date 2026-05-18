@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { Logger } from '../../libs/logger/index.js';
 import {
   BaseController,
+  DocumentExistsMiddleware,
   HttpError,
   HttpMethod,
   ValidateDtoMiddleware,
@@ -36,7 +37,8 @@ export class CommentController extends BaseController {
       method: HttpMethod.Get,
       handler: this.index,
       middlewares: [
-        new ValidateObjectIdMiddleware('offerId')
+        new ValidateObjectIdMiddleware('offerId'),
+        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
       ]
     });
     this.addRoute({
@@ -45,7 +47,8 @@ export class CommentController extends BaseController {
       handler: this.create,
       middlewares: [
         new ValidateObjectIdMiddleware('offerId'),
-        new ValidateDtoMiddleware(CreateCommentDto)
+        new ValidateDtoMiddleware(CreateCommentDto),
+        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
       ]
     });
   }
@@ -55,15 +58,6 @@ export class CommentController extends BaseController {
     res: Response,
   ): Promise<void> {
     const offerId = (params as OfferIdParam).offerId.trim();
-    const existsOffer = await this.offerService.exists(offerId);
-
-    if (!existsOffer) {
-      throw new HttpError(
-        StatusCodes.NOT_FOUND,
-        `Offer with id ${offerId} not found.`,
-        'CommentController',
-      );
-    }
 
     const comments = await this.commentService.findByOfferId(offerId);
     this.ok(res, fillDTO(CommentRdo, comments));
@@ -74,15 +68,6 @@ export class CommentController extends BaseController {
     res: Response,
   ): Promise<void> {
     const offerId = (params as OfferIdParam).offerId.trim();
-    const existsOffer = await this.offerService.exists(offerId);
-
-    if (!existsOffer) {
-      throw new HttpError(
-        StatusCodes.NOT_FOUND,
-        `Offer with id ${offerId} not found.`,
-        'CommentController',
-      );
-    }
 
     const userId = this.getUserId(headers['x-user-id']);
     const result = await this.commentService.create({
