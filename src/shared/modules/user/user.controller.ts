@@ -1,12 +1,13 @@
 import { inject, injectable } from 'inversify';
 import { Response, Request } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { BaseController, HttpError, HttpMethod } from '../../libs/rest/index.js';
+import { BaseController, HttpError, HttpMethod, ValidateDtoMiddleware } from '../../libs/rest/index.js';
 import { Logger } from '../../libs/logger/index.js';
 import { Component } from '../../types/index.js';
 import { UserService } from './user-service.interface.js';
 import { Config, RestSchema } from '../../libs/config/index.js';
-import { RequestBody, RequestParams } from '../../libs/rest/index.js';
+import { LoginUserRequest } from './types/login-user-request.type.js';
+import { CreateUserRequest } from './types/create-user-request.type.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
 import { createSHA256, fillDTO } from '../../helpers/index.js';
@@ -22,14 +23,28 @@ export class UserController extends BaseController {
     super(logger);
     this.logger.info('Register routes for UserController…');
 
-    this.addRoute({ path: '/register', method: HttpMethod.Post, handler: this.create });
-    this.addRoute({ path: '/login', method: HttpMethod.Post, handler: this.login });
+    this.addRoute({
+      path: '/register',
+      method: HttpMethod.Post,
+      handler: this.create,
+      middlewares: [
+        new ValidateDtoMiddleware(CreateUserDto)
+      ]
+    });
+    this.addRoute({
+      path: '/login',
+      method: HttpMethod.Post,
+      handler: this.login,
+      middlewares: [
+        new ValidateDtoMiddleware(LoginUserDto)
+      ]
+    });
     this.addRoute({ path: '/logout', method: HttpMethod.Post, handler: this.logout });
     this.addRoute({ path: '/profile', method: HttpMethod.Get, handler: this.profile });
   }
 
   public async create(
-    { body }: Request<RequestParams, RequestBody, CreateUserDto>,
+    { body }: CreateUserRequest,
     res: Response,
   ): Promise<void> {
     const existsUser = await this.userService.findByEmail(body.email);
@@ -47,12 +62,12 @@ export class UserController extends BaseController {
   }
 
   public async login(
-    { body }: Request<RequestParams, RequestBody, LoginUserDto>,
+    { body }: LoginUserRequest,
     res: Response,
   ): Promise<void> {
     const existsUser = await this.userService.findByEmail(body.email);
 
-    if (! existsUser) {
+    if (!existsUser) {
       throw new HttpError(
         StatusCodes.UNAUTHORIZED,
         `User with email ${body.email} not found.`,
