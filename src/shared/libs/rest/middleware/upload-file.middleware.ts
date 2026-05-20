@@ -3,7 +3,7 @@ import multer, { diskStorage } from 'multer';
 import { extension } from 'mime-types';
 import { nanoid } from 'nanoid';
 import { Middleware } from './middleware.interface.js';
-import { HttpError } from '../errors/index.js';
+import { HttpError } from '../index.js';
 import { StatusCodes } from 'http-status-codes';
 import { mkdirSync } from 'node:fs';
 

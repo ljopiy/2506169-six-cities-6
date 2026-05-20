@@ -10,6 +10,7 @@ import { Component } from '../../shared/types/index.js';
 import { DEFAULT_DB_PORT, DEFAULT_USER_PASSWORD } from './command.constans.js';
 import { Offer } from '../../shared/types/index.js';
 
+
 @injectable()
 export class ImportCommand implements Command {
   private salt!: string;
@@ -101,7 +102,6 @@ export class ImportCommand implements Command {
       previewPath: offer.previewPath,
       images: offer.images,
       isPremium: offer.isPremium,
-      isFavorite: offer.isFavorite,
       rating: offer.rating,
       type: offer.type,
       roomsCount: offer.roomsCount,

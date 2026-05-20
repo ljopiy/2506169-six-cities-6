@@ -7,7 +7,6 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
-  IsMongoId,
   IsNumber,
   IsOptional,
   IsString,
@@ -59,9 +58,6 @@ export class CreateOfferDto {
   @IsBoolean({ message: OfferValidationMessages.isPremium.invalidFormat })
   public isPremium!: boolean;
 
-  @IsBoolean({ message: OfferValidationMessages.isFavorite.invalidFormat })
-  public isFavorite!: boolean;
-
   @IsNumber({}, { message: OfferValidationMessages.rating.invalidFormat })
   @Min(1, { message: OfferValidationMessages.rating.rangeField })
   @Max(5, { message: OfferValidationMessages.rating.rangeField })
@@ -90,14 +86,12 @@ export class CreateOfferDto {
   @IsEnum(Convenience, { each: true, message: OfferValidationMessages.conveniences.invalidFormat })
   public conveniences!: Convenience[];
 
-  @IsMongoId({ message: OfferValidationMessages.authorId.invalidFormat })
-  public authorId!: string;
-
-  @IsInt({ message: OfferValidationMessages.commentsCount.invalidFormat })
-  @Min(0, { message: OfferValidationMessages.commentsCount.invalidFormat })
-  public commentsCount!: number;
-
   @ValidateNested({ message: OfferValidationMessages.coordinates.invalidFormat })
   @Type(() => CoordinatesDto)
   public coordinates!: Coordinates;
 }
+
+export type CreateOfferServiceDto = CreateOfferDto & {
+  authorId: string;
+  commentsCount: number;
+};

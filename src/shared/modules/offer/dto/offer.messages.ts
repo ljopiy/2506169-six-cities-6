@@ -48,9 +48,6 @@ export const OfferValidationMessages = {
   conveniences: {
     invalidFormat: 'conveniences must be a non-empty array'
   },
-  authorId: {
-    invalidFormat: 'authorId must be a valid id'
-  },
   commentsCount: {
     invalidFormat: 'commentsCount must be a non-negative integer'
   },

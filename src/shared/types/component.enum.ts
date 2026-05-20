@@ -19,4 +19,6 @@ export const Component = {
   ImportCommand: Symbol.for('ImportCommand'),
   VersionCommand: Symbol.for('VersionCommand'),
   GenerateCommand: Symbol.for('GenerateCommand'),
+  AuthService: Symbol.for('AuthService'),
+  AuthExceptionFilter: Symbol.for('AuthExceptionFilter'),
 } as const;

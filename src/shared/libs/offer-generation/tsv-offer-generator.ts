@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { OfferGenerator } from './offer-generator.interface.js';
 import { MockServerData, Convenience, OfferType, UserType, CityName } from '../../types/index.js';
-import { generateRandomValue, getRandomItem, getRandomItems } from '../../helpers/index.js';
+import { generateRandomValue, getRandomItem } from '../../helpers/index.js';
 import generator from 'generate-password';
 
 const MIN_PRICE = 100;
@@ -29,7 +29,12 @@ export class TSVOfferGenerator implements OfferGenerator {
     const roomsCount = generateRandomValue(1, 8);
     const guestsCount = generateRandomValue(1, 10);
     const price = generateRandomValue(MIN_PRICE, MAX_PRICE);
-    const conveniences = getRandomItems<string>(Object.keys(Convenience)).join(',');
+    const convenienceKeys = Object.keys(Convenience);
+    const conveniencesCount = generateRandomValue(1, convenienceKeys.length);
+    const conveniences = [...convenienceKeys]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, conveniencesCount)
+      .join(',');
     const authorName = getRandomItem<string>(this.mockData.authors);
     const authorEmail = getRandomItem<string>(this.mockData.emails);
     const authorAvatarPath = getRandomItem<string>(this.mockData.avatars);
