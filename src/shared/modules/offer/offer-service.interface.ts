@@ -1,11 +1,11 @@
-import { CreateOfferDto } from './dto/create-offer.dto.js';
+import { CreateOfferServiceDto } from './dto/create-offer.dto.js';
 import { UpdateOfferDto } from './dto/update-offer.dto.js';
 import { DocumentType } from '@typegoose/typegoose';
 import { OfferEntity } from './offer.entity.js';
 import { DeleteResult } from 'mongoose';
 
 export interface OfferService {
-  create(dto: CreateOfferDto): Promise<DocumentType<OfferEntity>>;
+  create(dto: CreateOfferServiceDto): Promise<DocumentType<OfferEntity>>;
   findById(offerId: string): Promise<DocumentType<OfferEntity> | null>;
   find(limit?: number): Promise<DocumentType<OfferEntity>[]>;
   deleteById(offerId: string): Promise<DeleteResult>;

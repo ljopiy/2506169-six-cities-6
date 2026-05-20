@@ -60,10 +60,6 @@ export class UpdateOfferDto {
   public isPremium?: boolean;
 
   @IsOptional()
-  @IsBoolean({ message: OfferValidationMessages.isFavorite.invalidFormat })
-  public isFavorite?: boolean;
-
-  @IsOptional()
   @IsNumber({}, { message: OfferValidationMessages.rating.invalidFormat })
   @Min(1, { message: OfferValidationMessages.rating.rangeField })
   @Max(5, { message: OfferValidationMessages.rating.rangeField })
@@ -96,11 +92,6 @@ export class UpdateOfferDto {
   @ArrayMinSize(1, { message: OfferValidationMessages.conveniences.invalidFormat })
   @IsEnum(Convenience, { each: true, message: OfferValidationMessages.conveniences.invalidFormat })
   public conveniences?: Convenience[];
-
-  @IsOptional()
-  @IsInt({ message: OfferValidationMessages.commentsCount.invalidFormat })
-  @Min(0, { message: OfferValidationMessages.commentsCount.invalidFormat })
-  public commentsCount?: number;
 
   @IsOptional()
   @ValidateNested({ message: OfferValidationMessages.coordinates.invalidFormat })

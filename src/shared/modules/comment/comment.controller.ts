@@ -8,7 +8,8 @@ import {
   HttpError,
   HttpMethod,
   ValidateDtoMiddleware,
-  ValidateObjectIdMiddleware
+  ValidateObjectIdMiddleware,
+  PrivateRouteMiddleware
 } from '../../libs/rest/index.js';
 import { Component } from '../../types/index.js';
 import { CommentService } from './comment-service.interface.js';
@@ -46,6 +47,7 @@ export class CommentController extends BaseController {
       method: HttpMethod.Post,
       handler: this.create,
       middlewares: [
+        new PrivateRouteMiddleware(),
         new ValidateObjectIdMiddleware('offerId'),
         new ValidateDtoMiddleware(CreateCommentDto),
         new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
@@ -64,14 +66,22 @@ export class CommentController extends BaseController {
   }
 
   public async create(
-    { body, params, headers }: CreateCommentRequest,
+    req: CreateCommentRequest,
     res: Response,
   ): Promise<void> {
-    const offerId = (params as OfferIdParam).offerId.trim();
+    const offerId = (req.params as OfferIdParam).offerId.trim();
+    const userId = this.getRequiredUserId(req);
 
-    const userId = this.getUserId(headers['x-user-id']);
+    if (! await this.offerService.exists(offerId)) {
+      throw new HttpError(
+        StatusCodes.NOT_FOUND,
+        `Offer with id ${offerId} not found.`,
+        'CommentController'
+      );
+    }
+
     const result = await this.commentService.create({
-      ...body,
+      ...req.body,
       offerId,
       authorId: userId,
     });
@@ -82,17 +92,15 @@ export class CommentController extends BaseController {
     this.created(res, fillDTO(CommentRdo, result));
   }
 
-  private getUserId(userId: string | string[] | undefined): string {
-    const value = Array.isArray(userId) ? userId[0] : userId;
-
-    if (!value) {
+  private getRequiredUserId(req: CreateCommentRequest): string {
+    if (!req.tokenPayload?.id) {
       throw new HttpError(
         StatusCodes.UNAUTHORIZED,
         'Unauthorized user',
-        'CommentController',
+        'CommentController'
       );
     }
 
-    return value;
+    return req.tokenPayload.id;
   }
 }

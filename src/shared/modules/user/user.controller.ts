@@ -3,12 +3,12 @@ import { Response, Request } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import {
   BaseController,
-  DocumentExistsMiddleware,
+  AnonymousRouteMiddleware,
   HttpError,
   HttpMethod,
+  PrivateRouteMiddleware,
   UploadFileMiddleware,
   ValidateDtoMiddleware,
-  ValidateObjectIdMiddleware
 } from '../../libs/rest/index.js';
 import { Logger } from '../../libs/logger/index.js';
 import { Component } from '../../types/index.js';
@@ -16,11 +16,12 @@ import { UserService } from './user-service.interface.js';
 import { Config, RestSchema } from '../../libs/config/index.js';
 import { LoginUserRequest } from './types/login-user-request.type.js';
 import { CreateUserRequest } from './types/create-user-request.type.js';
-import { ParamUserId } from './types/param-userid.type.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
-import { createSHA256, fillDTO, prepareUser } from '../../helpers/index.js';
+import { fillDTO, prepareUser } from '../../helpers/index.js';
 import { UserRdo } from './rdo/user.rdo.js';
+import { AuthService } from '../auth/index.js';
+import { LoggedUserRdo } from './rdo/logged-user.rdo.js';
 
 @injectable()
 export class UserController extends BaseController {
@@ -28,6 +29,7 @@ export class UserController extends BaseController {
     @inject(Component.Logger) protected readonly logger: Logger,
     @inject(Component.UserService) private readonly userService: UserService,
     @inject(Component.Config) private readonly configService: Config<RestSchema>,
+    @inject(Component.AuthService) private readonly authService: AuthService,
   ) {
     super(logger);
     this.logger.info('Register routes for UserController…');
@@ -37,6 +39,7 @@ export class UserController extends BaseController {
       method: HttpMethod.Post,
       handler: this.create,
       middlewares: [
+        new AnonymousRouteMiddleware(),
         new ValidateDtoMiddleware(CreateUserDto)
       ]
     });
@@ -49,17 +52,38 @@ export class UserController extends BaseController {
       ]
     });
     this.addRoute({
-      path: '/:userId/avatar',
+      path: '/avatar',
       method: HttpMethod.Post,
       handler: this.uploadAvatar,
       middlewares: [
-        new ValidateObjectIdMiddleware('userId'),
+        new PrivateRouteMiddleware(),
         new UploadFileMiddleware(this.configService.get('UPLOAD_DIRECTORY'), 'avatar'),
-        new DocumentExistsMiddleware(this.userService, 'User', 'userId'),
       ]
     });
-    this.addRoute({ path: '/logout', method: HttpMethod.Post, handler: this.logout });
-    this.addRoute({ path: '/profile', method: HttpMethod.Get, handler: this.profile });
+    this.addRoute({
+      path: '/login',
+      method: HttpMethod.Get,
+      handler: this.checkAuthenticate,
+      middlewares: [
+        new PrivateRouteMiddleware()
+      ]
+    });
+    this.addRoute({
+      path: '/logout',
+      method: HttpMethod.Post,
+      handler: this.logout,
+      middlewares: [
+        new PrivateRouteMiddleware()
+      ]
+    });
+    this.addRoute({
+      path: '/profile',
+      method: HttpMethod.Get,
+      handler: this.profile,
+      middlewares: [
+        new PrivateRouteMiddleware()
+      ]
+    });
   }
 
   public async create(
@@ -84,28 +108,13 @@ export class UserController extends BaseController {
     { body }: LoginUserRequest,
     res: Response,
   ): Promise<void> {
-    const existsUser = await this.userService.findByEmail(body.email);
-
-    if (!existsUser) {
-      throw new HttpError(
-        StatusCodes.UNAUTHORIZED,
-        `User with email ${body.email} not found.`,
-        'UserController',
-      );
-    }
-
-    const passwordHash = createSHA256(body.password, this.configService.get('SALT'));
-    const isPasswordValid = passwordHash === existsUser.getPassword();
-
-    if (!isPasswordValid) {
-      throw new HttpError(
-        StatusCodes.UNAUTHORIZED,
-        'Incorrect email or password.',
-        'UserController',
-      );
-    }
-
-    this.ok(res, { token: String(existsUser._id) });
+    const user = await this.authService.verify(body);
+    const token = await this.authService.authenticate(user);
+    const responseData = fillDTO(LoggedUserRdo, {
+      email: user.email,
+      token,
+    });
+    this.ok(res, responseData);
   }
 
   public async logout(
@@ -113,7 +122,7 @@ export class UserController extends BaseController {
     res: Response,
   ): Promise<void> {
     this.getUserId(req);
-    this.ok(res, { message: 'Logout completed' });
+    this.noContent(res, null);
   }
 
   public async profile(
@@ -138,8 +147,7 @@ export class UserController extends BaseController {
     req: Request,
     res: Response,
   ): Promise<void> {
-    const params = req.params as ParamUserId;
-    const userId = this.extractParam(params.userId, 'userId');
+    const userId = this.getUserId(req);
 
     if (!req.file) {
       throw new HttpError(
@@ -164,10 +172,7 @@ export class UserController extends BaseController {
   }
 
   private getUserId(req: Request): string {
-    const userId = req.headers['x-user-id'];
-    const value = Array.isArray(userId) ? userId[0] : userId;
-
-    if (!value) {
+    if (!req.tokenPayload?.id) {
       throw new HttpError(
         StatusCodes.UNAUTHORIZED,
         'Unauthorized user',
@@ -175,20 +180,30 @@ export class UserController extends BaseController {
       );
     }
 
-    return value;
+    return req.tokenPayload.id;
   }
 
-  private extractParam(param: unknown, name: string): string {
-    const value = Array.isArray(param) ? param[0] : param;
+  public async checkAuthenticate(req: Request, res: Response) {
+    const email = req.tokenPayload?.email;
 
-    if (typeof value !== 'string') {
+    if (!email) {
       throw new HttpError(
-        StatusCodes.BAD_REQUEST,
-        `${name} is invalid`,
-        'UserController',
+        StatusCodes.UNAUTHORIZED,
+        'Unauthorized',
+        'UserController'
       );
     }
 
-    return value.trim();
+    const foundedUser = await this.userService.findByEmail(email);
+
+    if (!foundedUser) {
+      throw new HttpError(
+        StatusCodes.UNAUTHORIZED,
+        'Unauthorized',
+        'UserController'
+      );
+    }
+
+    this.ok(res, fillDTO(UserRdo, prepareUser(foundedUser)));
   }
 }
