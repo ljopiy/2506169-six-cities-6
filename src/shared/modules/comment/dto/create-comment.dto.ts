@@ -1,4 +1,4 @@
-import { IsString, Min, Max, Length, IsInt  } from 'class-validator';
+import { IsString, Min, Max, Length, IsInt } from 'class-validator';
 import { CreateCommentMessages } from './create-comment.messages.js';
 
 export class CreateCommentDto {

@@ -39,7 +39,7 @@ export class TSVFileReader extends EventEmitter implements FileReader {
         this.emit('line', remainingData, resolve);
       });
     }
-    
+
     this.emit('end', importedRowCount);
   }
 }
