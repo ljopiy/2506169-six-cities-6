@@ -41,7 +41,7 @@ export class ValidateDtoMiddleware implements Middleware {
     try {
       await unlink(filePath);
     } catch {
-      
+      // ignore error
     }
   }
 }
