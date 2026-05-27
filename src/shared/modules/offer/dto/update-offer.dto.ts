@@ -6,9 +6,9 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   Length,
   Max,
   Min,
@@ -16,18 +16,7 @@ import {
 } from 'class-validator';
 import { CityName, Convenience, OfferType, Coordinates } from '../../../types/index.js';
 import { OfferValidationMessages } from './offer.messages.js';
-
-class CoordinatesDto implements Coordinates {
-  @IsNumber({}, { message: OfferValidationMessages.latitude.invalidFormat })
-  @Min(-90, { message: OfferValidationMessages.latitude.rangeField })
-  @Max(90, { message: OfferValidationMessages.latitude.rangeField })
-  public latitude!: number;
-
-  @IsNumber({}, { message: OfferValidationMessages.longitude.invalidFormat })
-  @Min(-180, { message: OfferValidationMessages.longitude.rangeField })
-  @Max(180, { message: OfferValidationMessages.longitude.rangeField })
-  public longitude!: number;
-}
+import { CoordinatesDto } from './coordinates-offer.dto.js';
 
 export class UpdateOfferDto {
   @IsOptional()
@@ -45,25 +34,19 @@ export class UpdateOfferDto {
   public city?: string;
 
   @IsOptional()
-  @IsString({ message: OfferValidationMessages.previewPath.invalidFormat })
-  public previewPath?: string;
+  @IsUrl({}, { message: OfferValidationMessages.previewUrl.invalidFormat })
+  public previewUrl?: string;
 
   @IsOptional()
   @IsArray({ message: OfferValidationMessages.images.invalidFormat })
   @ArrayMinSize(6, { message: OfferValidationMessages.images.countField })
   @ArrayMaxSize(6, { message: OfferValidationMessages.images.countField })
-  @IsString({ each: true, message: OfferValidationMessages.images.invalidFormat })
+  @IsUrl({}, { each: true, message: OfferValidationMessages.images.invalidFormat })
   public images?: string[];
 
   @IsOptional()
   @IsBoolean({ message: OfferValidationMessages.isPremium.invalidFormat })
   public isPremium?: boolean;
-
-  @IsOptional()
-  @IsNumber({}, { message: OfferValidationMessages.rating.invalidFormat })
-  @Min(1, { message: OfferValidationMessages.rating.rangeField })
-  @Max(5, { message: OfferValidationMessages.rating.rangeField })
-  public rating?: number;
 
   @IsOptional()
   @IsEnum(OfferType, { message: OfferValidationMessages.type.invalidFormat })

@@ -1,22 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 import { UserRdo } from '../../user/rdo/user.rdo.js';
-
-class LocationRdo {
-  @Expose()
-  public latitude!: number;
-
-  @Expose()
-  public longitude!: number;
-}
-
-class CityRdo {
-  @Expose()
-  public name!: string;
-
-  @Expose()
-  @Type(() => LocationRdo)
-  public location!: LocationRdo;
-}
+import { CityRdo } from './offer-city.rdo.js';
 
 export class OfferRdo {
   @Expose()
@@ -43,20 +27,20 @@ export class OfferRdo {
   @Expose()
   public type!: string;
 
-  @Expose({ name: 'roomsCount' })
-  public rooms!: number;
+  @Expose()
+  public roomsCount!: number;
 
-  @Expose({ name: 'guestsCount' })
-  public guests!: number;
+  @Expose()
+  public guestsCount!: number;
 
   @Expose()
   public price!: number;
 
-  @Expose({ name: 'conveniences' })
-  public amenities!: string[];
+  @Expose()
+  public conveniences!: string[];
 
-  @Expose({ name: 'previewPath' })
-  public previewImage!: string;
+  @Expose()
+  public previewUrl!: string;
 
   @Expose()
   public images!: string[];
@@ -66,14 +50,14 @@ export class OfferRdo {
 
   @Expose({ name: 'authorId' })
   @Type(() => UserRdo)
-  public host!: UserRdo;
+  public author!: UserRdo;
 
   @Expose()
   @Type(() => CityRdo)
   public city!: CityRdo;
 
-  @Expose({ name: 'coordinates' })
-  public location!: {
+  @Expose()
+  public coordinates!: {
     latitude: number;
     longitude: number;
   };

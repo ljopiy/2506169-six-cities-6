@@ -4,6 +4,6 @@ export const LoginUserMessages = {
   },
   password: {
     invalidFormat: 'password is required',
-    lengthField: 'min length is 6, max is 12'
+    lengthField: 'password: min length is 6, max is 12'
   },
 } as const;

@@ -49,6 +49,4 @@ export class DefaultAuthService implements AuthService {
 
     return user;
   }
-
-
 }

@@ -16,6 +16,7 @@ export interface UserEntity extends defaultClasses.Base { }
 export class UserEntity extends defaultClasses.TimeStamps implements User {
   @prop({
     required: true,
+    type: () => String,
     trim: true,
     minlength: 1,
     maxlength: 15
@@ -24,12 +25,13 @@ export class UserEntity extends defaultClasses.TimeStamps implements User {
 
   @prop({
     required: true,
+    type: () => String,
     unique: true,
     trim: true
   })
   public email!: string;
 
-  @prop()
+  @prop({type: () => String})
   public avatarPath?: string;
 
   @prop({
@@ -42,12 +44,14 @@ export class UserEntity extends defaultClasses.TimeStamps implements User {
 
   @prop({
     required: true,
+    type: () => String,
     minlength: 64,
     maxlength: 64
   })
   private password?: string;
 
   @prop({
+    type: () => [String],
     ref: 'OfferEntity',
     default: [],
   })

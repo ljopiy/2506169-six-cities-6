@@ -1,11 +1,11 @@
 export const OfferValidationMessages = {
   title: {
     invalidFormat: 'title is required',
-    lengthField: 'min length is 10, max is 100'
+    lengthField: 'title: min length is 10, max is 100'
   },
   description: {
     invalidFormat: 'description is required',
-    lengthField: 'min length is 20, max is 1024'
+    lengthField: 'description: min length is 20, max is 1024'
   },
   postDate: {
     invalidFormat: 'postDate must be a valid ISO date'
@@ -13,25 +13,18 @@ export const OfferValidationMessages = {
   city: {
     invalidFormat: 'city must be one of six cities: Paris, Cologne, Brussels, Amsterdam, Hamburg, Dusseldorf'
   },
-  previewPath: {
-    invalidFormat: 'previewPath is required'
+  previewUrl: {
+    invalidFormat: 'previewUrl must be valid URL',
   },
   images: {
-    invalidFormat: 'images must be an array of 6 strings',
+    invalidFormat: 'images must be an array of 6 URLs',
     countField: 'images count must be exactly 6'
   },
   isPremium: {
     invalidFormat: 'isPremium must be boolean'
   },
-  isFavorite: {
-    invalidFormat: 'isFavorite must be boolean'
-  },
-  rating: {
-    invalidFormat: 'rating must be a number',
-    rangeField: 'min rating is 1, max is 5'
-  },
   type: {
-    invalidFormat: 'type must be Apartment, House, Room or Hotel'
+    invalidFormat: 'type must be apartment, house, room or hotel'
   },
   roomsCount: {
     invalidFormat: 'roomsCount must be an integer',
@@ -47,9 +40,6 @@ export const OfferValidationMessages = {
   },
   conveniences: {
     invalidFormat: 'conveniences must be a non-empty array'
-  },
-  commentsCount: {
-    invalidFormat: 'commentsCount must be a non-negative integer'
   },
   coordinates: {
     invalidFormat: 'coordinates object is required'

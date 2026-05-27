@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { OfferGenerator } from './offer-generator.interface.js';
 import { MockServerData, Convenience, OfferType, UserType, CityName } from '../../types/index.js';
-import { generateRandomValue, getRandomItem } from '../../helpers/index.js';
+import { generateRandomValue, getRandomItem, getRandomItems } from '../../helpers/index.js';
 import generator from 'generate-password';
 
 const MIN_PRICE = 100;
@@ -20,27 +20,21 @@ export class TSVOfferGenerator implements OfferGenerator {
       .subtract(generateRandomValue(FIRST_WEEK_DAY, LAST_WEEK_DAY), 'day')
       .toISOString();
     const city = getRandomItem<CityName>(this.mockData.cities);
-    const previewPath = getRandomItem<string>(this.mockData.images);
+    const previewUrl = getRandomItem<string>(this.mockData.images);
     const images = this.mockData.images.join(',');
     const isPremium = generateRandomValue(0, 1) === 1;
-    const isFavorite = generateRandomValue(0, 1) === 1;
     const rating = generateRandomValue(1, 5, 1);
-    const type = getRandomItem<string>(Object.keys(OfferType));
+    const type = getRandomItem<OfferType>(Object.values(OfferType));
     const roomsCount = generateRandomValue(1, 8);
     const guestsCount = generateRandomValue(1, 10);
     const price = generateRandomValue(MIN_PRICE, MAX_PRICE);
-    const convenienceKeys = Object.keys(Convenience);
-    const conveniencesCount = generateRandomValue(1, convenienceKeys.length);
-    const conveniences = [...convenienceKeys]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, conveniencesCount)
-      .join(',');
+    const conveniences = getRandomItems(Object.keys(Convenience)).join(',');
     const authorName = getRandomItem<string>(this.mockData.authors);
     const authorEmail = getRandomItem<string>(this.mockData.emails);
-    const authorAvatarPath = getRandomItem<string>(this.mockData.avatars);
+    const authorAvatarPath = this.mockData.avatar;
     const authorPassword = generator.generate({ length: 10, numbers: true });
-    const authorType = getRandomItem<string>(Object.keys(UserType));
-    const commentsCount = generateRandomValue(0, 100);
+    const authorType = getRandomItem<UserType>(Object.values(UserType));
+    const commentsCount = 0;
     const coordinates = `${generateRandomValue(-90, 90, 6)},${generateRandomValue(-180, 180, 6)}`;
 
     return [
@@ -48,10 +42,9 @@ export class TSVOfferGenerator implements OfferGenerator {
       description,
       postDate,
       city,
-      previewPath,
+      previewUrl,
       images,
       isPremium,
-      isFavorite,
       rating,
       type,
       roomsCount,

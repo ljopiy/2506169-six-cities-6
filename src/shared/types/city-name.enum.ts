@@ -1,8 +1,8 @@
 export enum CityName {
-  Moscow = 'Москва',
-  SaintPetersburg = 'Санкт-Петербург',
-  Kazan = 'Казань',
-  Sochi = 'Сочи',
-  Yekaterinburg = 'Екатеринбург',
-  NizhnyNovgorod = 'Нижний Новгород'
+  Paris = 'Paris',
+  Cologne = 'Cologne',
+  Brussels = 'Brussels',
+  Amsterdam = 'Amsterdam',
+  Hamburg = 'Hamburg',
+  Dusseldorf = 'Dusseldorf'
 }

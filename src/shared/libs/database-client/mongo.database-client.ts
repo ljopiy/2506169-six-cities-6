@@ -39,7 +39,10 @@ export class MongoDatabaseClient implements DatabaseClient {
         return;
       } catch (error) {
         attempt++;
-        this.logger.error(`Failed to connect to the database. Attempt ${attempt}`, error as Error);
+        this.logger.error(
+          `Failed to connect to the database. Attempt ${attempt}`,
+          error instanceof Error ? error : new Error(String(error))
+        );
         await setTimeout(RETRY_TIMEOUT);
       }
     }

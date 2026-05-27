@@ -1,6 +1,6 @@
 import { DocumentType } from '@typegoose/typegoose';
 import { Convenience, Offer, OfferType, UserType, CityName } from '../types/index.js';
-import { Cities } from '../constans/cities.js';
+import { Cities } from '../constants/cities.js';
 import { OfferEntity } from '../modules/offer/offer.entity.js';
 
 export function createOffer(offerData: string): Offer {
@@ -9,10 +9,9 @@ export function createOffer(offerData: string): Offer {
     description,
     postDate,
     city,
-    previewPath,
+    previewUrl,
     images,
     isPremium,
-    isFavorite,
     rating,
     type,
     roomsCount,
@@ -31,31 +30,31 @@ export function createOffer(offerData: string): Offer {
   const author = {
     name: authorName,
     email: authorEmail,
-    avatar: authorAvatarPath,
+    avatarPath: authorAvatarPath,
     password: authorPassword,
-    type: UserType[authorType as keyof typeof UserType]
+    type: parseUserType(authorType)
   };
 
   const offerCoordinates = {
     latitude: Number.parseFloat(coordinates.split(',')[0]),
     longitude: Number.parseFloat(coordinates.split(',')[1])
   };
+  const normalizedOfferType = parseOfferType(type);
 
   return {
     title,
     description,
     postDate: new Date(postDate),
-    city: CityName[city as keyof typeof CityName],
-    previewPath,
+    city: parseCityName(city),
+    previewUrl,
     images: images.split(','),
     isPremium: isPremium === 'true',
-    isFavorite: isFavorite === 'true',
     rating: Number.parseFloat(rating),
-    type: OfferType[type as keyof typeof OfferType],
+    type: normalizedOfferType,
     roomsCount: Number.parseInt(roomsCount, 10),
     guestsCount: Number.parseInt(guestsCount, 10),
     price: Number.parseInt(price, 10),
-    conveniences: conveniences.split(',').map((convenience) => Convenience[convenience as keyof typeof Convenience]),
+    conveniences: conveniences.split(',').map((convenience) => parseConvenience(convenience)),
     author,
     commentsCount: Number.parseInt(commentsCount, 10),
     coordinates: offerCoordinates
@@ -63,7 +62,7 @@ export function createOffer(offerData: string): Offer {
 }
 
 export function prepareOffer(offer: DocumentType<OfferEntity>) {
-  const plain = offer.toObject() as OfferEntity;
+  const plain = offer.toObject();
   const city = Cities[plain.city];
 
   return {
@@ -71,10 +70,77 @@ export function prepareOffer(offer: DocumentType<OfferEntity>) {
     id: String(offer._id),
     city: {
       name: city.name,
-      location: {
+      coordinates: {
         latitude: city.latitude,
         longitude: city.longitude,
       },
     },
   };
+}
+
+function parseUserType(value: string): UserType {
+  return parseEnumValue(
+    value,
+    Object.values(UserType) as UserType[],
+    {},
+    'user type'
+  );
+}
+
+function parseOfferType(value: string): OfferType {
+  return parseEnumValue(
+    value,
+    Object.values(OfferType) as OfferType[],
+    {
+      Apartment: OfferType.Apartment,
+      House: OfferType.House,
+      Room: OfferType.Room,
+      Hotel: OfferType.Hotel
+    },
+    'offer type'
+  );
+}
+
+function parseCityName(value: string): CityName {
+  return parseEnumValue(
+    value,
+    Object.values(CityName) as CityName[],
+    {},
+    'city'
+  );
+}
+
+function parseConvenience(value: string): Convenience {
+  return parseEnumValue(
+    value,
+    Object.values(Convenience) as Convenience[],
+    {
+      Breakfast: Convenience.Breakfast,
+      AirConditioning: Convenience.AirConditioning,
+      LaptopFriendlyWorkspace: Convenience.LaptopFriendlyWorkspace,
+      BabySeat: Convenience.BabySeat,
+      Washer: Convenience.Washer,
+      Towels: Convenience.Towels,
+      Fridge: Convenience.Fridge
+    },
+    'convenience'
+  );
+}
+
+function parseEnumValue<T extends string>(
+  value: string,
+  values: readonly T[],
+  legacyMap: Partial<Record<string, T>>,
+  label: string
+): T {
+  if (values.includes(value as T)) {
+    return value as T;
+  }
+
+  const mapped = legacyMap[value];
+  if (mapped) {
+    return mapped;
+  }
+
+  throw new Error(`Invalid ${label}: ${value}`);
 }

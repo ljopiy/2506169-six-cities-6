@@ -7,9 +7,8 @@ import { OfferService } from '../../shared/modules/offer/index.js';
 import { DatabaseClient } from '../../shared/libs/database-client/index.js';
 import { Logger } from '../../shared/libs/logger/index.js';
 import { Component } from '../../shared/types/index.js';
-import { DEFAULT_DB_PORT, DEFAULT_USER_PASSWORD } from './command.constans.js';
+import { DEFAULT_DB_PORT, DEFAULT_USER_PASSWORD } from './command.constant.js';
 import { Offer } from '../../shared/types/index.js';
-
 
 @injectable()
 export class ImportCommand implements Command {
@@ -73,7 +72,10 @@ export class ImportCommand implements Command {
     try {
       await fileReader.read();
     } catch (error) {
-      this.logger.error(`Can't import data from file: ${fileName}`, error as Error);
+      this.logger.error(
+        `Can't import data from file: ${fileName}`,
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -99,7 +101,7 @@ export class ImportCommand implements Command {
       description: offer.description,
       postDate: offer.postDate,
       city: offer.city,
-      previewPath: offer.previewPath,
+      previewUrl: offer.previewUrl,
       images: offer.images,
       isPremium: offer.isPremium,
       rating: offer.rating,

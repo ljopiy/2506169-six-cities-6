@@ -21,4 +21,5 @@ export const Component = {
   GenerateCommand: Symbol.for('GenerateCommand'),
   AuthService: Symbol.for('AuthService'),
   AuthExceptionFilter: Symbol.for('AuthExceptionFilter'),
+  PathTransformer: Symbol.for('PathTransformer'),
 } as const;

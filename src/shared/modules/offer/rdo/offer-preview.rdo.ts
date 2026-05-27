@@ -1,21 +1,5 @@
 import { Expose, Type } from 'class-transformer';
-
-class LocationRdo {
-  @Expose()
-  public latitude!: number;
-
-  @Expose()
-  public longitude!: number;
-}
-
-class CityRdo {
-  @Expose()
-  public name!: string;
-
-  @Expose()
-  @Type(() => LocationRdo)
-  public location!: LocationRdo;
-}
+import { CityRdo } from './offer-city.rdo.js';
 
 export class OfferPreviewRdo {
   @Expose()
@@ -45,8 +29,8 @@ export class OfferPreviewRdo {
   @Expose()
   public commentsCount!: number;
 
-  @Expose({ name: 'previewPath' })
-  public previewImage!: string;
+  @Expose()
+  public previewUrl!: string;
 
   @Expose()
   @Type(() => CityRdo)

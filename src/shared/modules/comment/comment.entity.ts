@@ -1,6 +1,6 @@
 import { defaultClasses, getModelForClass, modelOptions, prop, Ref } from '@typegoose/typegoose';
-import { UserEntity } from '../user/user.entity.js';
-import { OfferEntity } from '../offer/offer.entity.js';
+import type { UserEntity } from '../user/user.entity.js';
+import type { OfferEntity } from '../offer/offer.entity.js';
 
 export interface CommentEntity extends defaultClasses.Base { }
 
@@ -13,6 +13,7 @@ export interface CommentEntity extends defaultClasses.Base { }
 export class CommentEntity extends defaultClasses.TimeStamps {
   @prop({
     required: true,
+    type: () => String,
     default: '',
     trim: true,
     minlength: 5,
@@ -22,6 +23,7 @@ export class CommentEntity extends defaultClasses.TimeStamps {
 
   @prop({
     required: true,
+    type: () => Number,
     default: 0,
     min: 1,
     max: 5
@@ -29,13 +31,15 @@ export class CommentEntity extends defaultClasses.TimeStamps {
   public rating!: number;
 
   @prop({
-    ref: UserEntity,
+    type: () => String,
+    ref: 'UserEntity',
     required: true
   })
   public authorId!: Ref<UserEntity>;
 
   @prop({
-    ref: OfferEntity,
+    type: () => String,
+    ref: 'OfferEntity',
     required: true
   })
   public offerId!: Ref<OfferEntity>;
