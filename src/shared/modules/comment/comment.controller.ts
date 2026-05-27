@@ -19,10 +19,6 @@ import { CreateCommentDto } from './dto/create-comment.dto.js';
 import { fillDTO } from '../../helpers/index.js';
 import { CommentRdo } from './rdo/comment.rdo.js';
 
-type OfferIdParam = {
-  offerId: string;
-};
-
 @injectable()
 export class CommentController extends BaseController {
   constructor(
@@ -36,7 +32,7 @@ export class CommentController extends BaseController {
     this.addRoute({
       path: '/:offerId/comments',
       method: HttpMethod.Get,
-      handler: this.index,
+      handler: this.listComments,
       middlewares: [
         new ValidateObjectIdMiddleware('offerId'),
         new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
@@ -55,11 +51,11 @@ export class CommentController extends BaseController {
     });
   }
 
-  public async index(
+  public async listComments(
     { params }: CreateCommentRequest,
     res: Response,
   ): Promise<void> {
-    const offerId = (params as OfferIdParam).offerId.trim();
+    const offerId = this.extractOfferId(params.offerId);
 
     const comments = await this.commentService.findByOfferId(offerId);
     this.ok(res, fillDTO(CommentRdo, comments));
@@ -69,16 +65,8 @@ export class CommentController extends BaseController {
     req: CreateCommentRequest,
     res: Response,
   ): Promise<void> {
-    const offerId = (req.params as OfferIdParam).offerId.trim();
+    const offerId = this.extractOfferId(req.params.offerId);
     const userId = this.getRequiredUserId(req);
-
-    if (! await this.offerService.exists(offerId)) {
-      throw new HttpError(
-        StatusCodes.NOT_FOUND,
-        `Offer with id ${offerId} not found.`,
-        'CommentController'
-      );
-    }
 
     const result = await this.commentService.create({
       ...req.body,
@@ -92,8 +80,10 @@ export class CommentController extends BaseController {
     this.created(res, fillDTO(CommentRdo, result));
   }
 
-  private getRequiredUserId(req: CreateCommentRequest): string {
-    if (!req.tokenPayload?.id) {
+  private getRequiredUserId(req: { tokenPayload?: { id: string } }): string {
+    const userId = req.tokenPayload?.id;
+
+    if (!userId) {
       throw new HttpError(
         StatusCodes.UNAUTHORIZED,
         'Unauthorized user',
@@ -101,6 +91,18 @@ export class CommentController extends BaseController {
       );
     }
 
-    return req.tokenPayload.id;
+    return userId;
+  }
+
+  private extractOfferId(offerIdParam: unknown): string {
+    if (typeof offerIdParam !== 'string') {
+      throw new HttpError(
+        StatusCodes.BAD_REQUEST,
+        'offerId is invalid',
+        'CommentController'
+      );
+    }
+
+    return offerIdParam.trim();
   }
 }

@@ -9,10 +9,9 @@ export type Offer = {
   description: string;
   postDate: Date;
   city: CityName;
-  previewPath: string;
+  previewUrl: string;
   images: string[];
   isPremium: boolean;
-  isFavorite: boolean;
   rating: number;
   type: OfferType;
   roomsCount: number;

@@ -1,9 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { ClassConstructor, plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { StatusCodes } from 'http-status-codes';
 import { Middleware } from './middleware.interface.js';
 import { HttpError } from '../index.js';
+import { StatusCodes } from 'http-status-codes';
+import { unlink } from 'node:fs/promises';
 
 export class ValidateDtoMiddleware implements Middleware {
   constructor(private dto: ClassConstructor<object>) {}
@@ -16,6 +17,7 @@ export class ValidateDtoMiddleware implements Middleware {
     });
 
     if (errors.length > 0) {
+      await this.removeUploadedFile(req.file?.path);
       const message = errors
         .flatMap((error) => Object.values(error.constraints ?? {}))
         .join('; ') || 'Validation failed';
@@ -26,7 +28,20 @@ export class ValidateDtoMiddleware implements Middleware {
         'ValidateDtoMiddleware'
       );
     }
-    req.body = dtoInstance as Request['body'];
+
+    req.body = dtoInstance;
     next();
+  }
+
+  private async removeUploadedFile(filePath?: string): Promise<void> {
+    if (!filePath) {
+      return;
+    }
+
+    try {
+      await unlink(filePath);
+    } catch {
+      // ignore error
+    }
   }
 }

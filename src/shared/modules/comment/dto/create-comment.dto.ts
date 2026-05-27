@@ -12,7 +12,7 @@ export class CreateCommentDto {
   public rating!: number;
 }
 
-export type CreateCommentServiceDto = CreateCommentDto & {
+export class CreateCommentServiceDto extends CreateCommentDto {
   offerId: string;
   authorId: string;
-};
+}

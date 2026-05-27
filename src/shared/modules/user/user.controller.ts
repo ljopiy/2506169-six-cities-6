@@ -22,6 +22,8 @@ import { fillDTO, prepareUser } from '../../helpers/index.js';
 import { UserRdo } from './rdo/user.rdo.js';
 import { AuthService } from '../auth/index.js';
 import { LoggedUserRdo } from './rdo/logged-user.rdo.js';
+import { UploadUserAvatarRdo } from './rdo/upload-user-avatar.rdo.js';
+import { unlink } from 'node:fs/promises';
 
 @injectable()
 export class UserController extends BaseController {
@@ -40,6 +42,7 @@ export class UserController extends BaseController {
       handler: this.create,
       middlewares: [
         new AnonymousRouteMiddleware(),
+        new UploadFileMiddleware(this.configService.get('UPLOAD_DIRECTORY'), 'avatar'),
         new ValidateDtoMiddleware(CreateUserDto)
       ]
     });
@@ -68,39 +71,34 @@ export class UserController extends BaseController {
         new PrivateRouteMiddleware()
       ]
     });
-    this.addRoute({
-      path: '/logout',
-      method: HttpMethod.Post,
-      handler: this.logout,
-      middlewares: [
-        new PrivateRouteMiddleware()
-      ]
-    });
-    this.addRoute({
-      path: '/profile',
-      method: HttpMethod.Get,
-      handler: this.profile,
-      middlewares: [
-        new PrivateRouteMiddleware()
-      ]
-    });
   }
 
   public async create(
-    { body }: CreateUserRequest,
+    req: CreateUserRequest,
     res: Response,
   ): Promise<void> {
-    const existsUser = await this.userService.findByEmail(body.email);
+    const createUserPayload = req.file
+      ? { ...req.body, avatarPath: `/upload/${req.file.filename}` }
+      : req.body;
+    const existsUser = await this.userService.findByEmail(createUserPayload.email);
 
     if (existsUser) {
+      await this.removeUploadedAvatar(req.file?.path);
       throw new HttpError(
         StatusCodes.CONFLICT,
-        `User with email «${body.email}» exists.`,
+        `User with email «${createUserPayload.email}» exists.`,
         'UserController'
       );
     }
 
-    const result = await this.userService.create(body, this.configService.get('SALT'));
+    let result;
+    try {
+      result = await this.userService.create(createUserPayload, this.configService.get('SALT'));
+    } catch (error) {
+      await this.removeUploadedAvatar(req.file?.path);
+      throw error;
+    }
+
     this.created(res, fillDTO(UserRdo, prepareUser(result)));
   }
 
@@ -117,37 +115,11 @@ export class UserController extends BaseController {
     this.ok(res, responseData);
   }
 
-  public async logout(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
-    this.getUserId(req);
-    this.noContent(res, null);
-  }
-
-  public async profile(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
-    const userId = this.getUserId(req);
-    const existsUser = await this.userService.findById(userId);
-
-    if (!existsUser) {
-      throw new HttpError(
-        StatusCodes.UNAUTHORIZED,
-        'Unauthorized user',
-        'UserController',
-      );
-    }
-
-    this.ok(res, fillDTO(UserRdo, prepareUser(existsUser)));
-  }
-
   public async uploadAvatar(
     req: Request,
     res: Response,
   ): Promise<void> {
-    const userId = this.getUserId(req);
+    const userId = this.getRequiredUserId(req);
 
     if (!req.file) {
       throw new HttpError(
@@ -163,38 +135,18 @@ export class UserController extends BaseController {
     if (!updatedUser) {
       throw new HttpError(
         StatusCodes.NOT_FOUND,
-        `User with id ${userId} not found.`,
+        'User not found',
         'UserController',
       );
     }
 
-    this.ok(res, fillDTO(UserRdo, prepareUser(updatedUser)));
-  }
-
-  private getUserId(req: Request): string {
-    if (!req.tokenPayload?.id) {
-      throw new HttpError(
-        StatusCodes.UNAUTHORIZED,
-        'Unauthorized user',
-        'UserController',
-      );
-    }
-
-    return req.tokenPayload.id;
+    this.created(res, fillDTO(UploadUserAvatarRdo, { avatarPath }));
   }
 
   public async checkAuthenticate(req: Request, res: Response) {
-    const email = req.tokenPayload?.email;
+    const userId = this.getRequiredUserId(req);
 
-    if (!email) {
-      throw new HttpError(
-        StatusCodes.UNAUTHORIZED,
-        'Unauthorized',
-        'UserController'
-      );
-    }
-
-    const foundedUser = await this.userService.findByEmail(email);
+    const foundedUser = await this.userService.findById(userId);
 
     if (!foundedUser) {
       throw new HttpError(
@@ -205,5 +157,31 @@ export class UserController extends BaseController {
     }
 
     this.ok(res, fillDTO(UserRdo, prepareUser(foundedUser)));
+  }
+
+  private getRequiredUserId(req: Request): string {
+    const userId = req.tokenPayload?.id;
+
+    if (!userId) {
+      throw new HttpError(
+        StatusCodes.UNAUTHORIZED,
+        'Unauthorized',
+        'UserController',
+      );
+    }
+
+    return userId;
+  }
+
+  private async removeUploadedAvatar(filePath?: string): Promise<void> {
+    if (!filePath) {
+      return;
+    }
+
+    try {
+      await unlink(filePath);
+    } catch {
+      this.logger.warn(`Could not remove uploaded avatar: ${filePath}`);
+    }
   }
 }

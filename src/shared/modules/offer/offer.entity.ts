@@ -14,6 +14,7 @@ export interface OfferEntity extends defaultClasses.Base { }
 export class OfferEntity extends defaultClasses.TimeStamps {
   @prop({
     required: true,
+    type: () => String,
     trim: true,
     minlength: 10,
     maxlength: 100
@@ -22,6 +23,7 @@ export class OfferEntity extends defaultClasses.TimeStamps {
 
   @prop({
     required: true,
+    type: () => String,
     trim: true,
     minlength: 20,
     maxlength: 1024
@@ -30,6 +32,7 @@ export class OfferEntity extends defaultClasses.TimeStamps {
 
   @prop({
     required: true,
+    type: () => Date,
     default: () => new Date()
   })
   public postDate!: Date;
@@ -43,9 +46,10 @@ export class OfferEntity extends defaultClasses.TimeStamps {
 
   @prop({
     required: true,
+    type: () => String,
     trim: true
   })
-  public previewPath!: string;
+  public previewUrl!: string;
 
   @prop({
     required: true,
@@ -55,20 +59,23 @@ export class OfferEntity extends defaultClasses.TimeStamps {
 
   @prop({
     required: true,
+    type: () => Boolean,
     default: false
   })
   public isPremium!: boolean;
 
   @prop({
-    required: true,
+    type: () => Boolean,
     default: false
   })
-  public isFavorite!: boolean;
+  public isFavorite?: boolean;
 
   @prop({
     required: true,
-    min: 1,
-    max: 5
+    type: () => Number,
+    min: 0,
+    max: 5,
+    default: 0
   })
   public rating!: number;
 
@@ -81,6 +88,7 @@ export class OfferEntity extends defaultClasses.TimeStamps {
 
   @prop({
     required: true,
+    type: () => Number,
     min: 1,
     max: 8
   })
@@ -88,6 +96,7 @@ export class OfferEntity extends defaultClasses.TimeStamps {
 
   @prop({
     required: true,
+    type: () => Number,
     min: 1,
     max: 10
   })
@@ -95,6 +104,7 @@ export class OfferEntity extends defaultClasses.TimeStamps {
 
   @prop({
     required: true,
+    type: () => Number,
     min: 100,
     max: 100000
   })
@@ -108,18 +118,16 @@ export class OfferEntity extends defaultClasses.TimeStamps {
   public conveniences!: Convenience[];
 
   @prop({
+    type: () => String,
     required: true,
     ref: 'UserEntity'
   })
   public authorId!: Ref<UserEntity>;
 
   @prop({
-    ref: 'UserEntity',
-    default: [],
+    type: () => Number,
+    default: 0
   })
-  public favoriteByUsers!: Ref<UserEntity>[];
-
-  @prop({ default: 0 })
   public commentsCount!: number;
 
   @prop({

@@ -8,15 +8,15 @@ Content-Type: application/json
   "description": "Светлая студия с современным ремонтом. Рядом кафе, магазины и транспортная развязка. Идеально для одного или пары.",
   "postDate": "2026-04-19T10:00:00.000Z",
   "city": "Berlin",
-  "previewPath": "studio-berlin.jpg",
+  "previewUrl": "https://example.com/images/studio-berlin.jpg",
   "images": [
-    "studio-1.jpg",
-    "studio-2.jpg",
-    "studio-3.jpg"
+    "https://example.com/images/studio-1.jpg",
+    "https://example.com/images/studio-2.jpg",
+    "https://example.com/images/studio-3.jpg"
   ],
   "isPremium": true,
   "rating": 4.8,
-  "type": "Apartment",
+  "type": "apartment",
   "roomsCount": 1,
   "guestsCount": 2,
   "price": 85000,
@@ -56,15 +56,15 @@ Content-Type: application/json
   "title": "Роскошный пентхаус с видом на реку",
   "description": "Просторные апартаменты на последнем этаже. Панорамные окна, терраса и высокие потолки. Престижный район.",
   "city": "Hamburg",
-  "previewPath": "penthouse-hamburg.jpg",
+  "previewUrl": "https://example.com/images/penthouse-hamburg.jpg",
   "images": [
-    "penthouse-1.jpg",
-    "penthouse-2.jpg",
-    "penthouse-3.jpg"
+    "https://example.com/images/penthouse-1.jpg",
+    "https://example.com/images/penthouse-2.jpg",
+    "https://example.com/images/penthouse-3.jpg"
   ],
   "isPremium": true,
   "rating": 4.9,
-  "type": "Penthouse",
+  "type": "house",
   "roomsCount": 4,
   "guestsCount": 6,
   "price": 250000,
