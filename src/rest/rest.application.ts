@@ -7,7 +7,7 @@ import { Component } from '../shared/types/index.js';
 import { DatabaseClient } from '../shared/libs/database-client/index.js';
 import { getFullServerPath, getMongoURI } from '../shared/helpers/index.js';
 import { Controller, ExceptionFilter, ParseTokenMiddleware } from '../shared/libs/rest/index.js';
-import { STATIC_FILES_ROUTE, STATIC_UPLOAD_ROUTE } from './rest.constant.js';
+import { StaticRoute, Route } from './rest.constant.js';
 
 @injectable()
 export class RestApplication {
@@ -26,8 +26,8 @@ export class RestApplication {
     this.server = express();
   }
 
-  private async _initDb() {
-    const mongoUri = getMongoURI(
+  private initDb(): Promise<void> {
+    const dbUri = getMongoURI(
       this.config.get('DB_USER'),
       this.config.get('DB_PASSWORD'),
       this.config.get('DB_HOST'),
@@ -35,63 +35,63 @@ export class RestApplication {
       this.config.get('DB_NAME'),
     );
 
-    return this.databaseClient.connect(mongoUri);
+    return this.databaseClient.connect(dbUri);
   }
 
-  private async _initServer() {
+  private initServer(): void {
     const port = this.config.get('PORT');
     this.server.listen(port);
   }
 
-  private async _initControllers() {
-    this.server.use('/users', this.userController.router);
-    this.server.use('/offers', this.commentController.router);
-    this.server.use('/offers', this.offerController.router);
+  private initControllers(): void {
+    this.server.use(Route.Users, this.userController.router);
+    this.server.use(Route.Offers, this.commentController.router);
+    this.server.use(Route.Offers, this.offerController.router);
   }
 
-  private async _initMiddleware() {
-    const authenticateMiddleware = new ParseTokenMiddleware(this.config.get('JWT_SECRET'));
+  private initMiddleware(): void {
+    const authMiddleware = new ParseTokenMiddleware(this.config.get('JWT_SECRET'));
 
     this.server.use(express.json());
     this.server.use(cors());
     this.server.use(
-      STATIC_UPLOAD_ROUTE,
-      express.static(this.config.get('UPLOAD_DIRECTORY'))
+      StaticRoute.UploadFiles,
+      express.static(this.config.get('UPLOAD_FILES_DIRECTORY'))
     );
     this.server.use(
-      STATIC_FILES_ROUTE,
-      express.static(this.config.get('STATIC_DIRECTORY_PATH'))
+      StaticRoute.AppFiles,
+      express.static(this.config.get('STATIC_FILES_DIRECTORY'))
     );
-    this.server.use(authenticateMiddleware.execute.bind(authenticateMiddleware));
+    this.server.use(authMiddleware.execute.bind(authMiddleware));
   }
 
-  private async _initExceptionFilters() {
+  private initExceptionFilters(): void {
     this.server.use(this.authExceptionFilter.catch.bind(this.authExceptionFilter));
     this.server.use(this.appExceptionFilter.catch.bind(this.appExceptionFilter));
   }
 
-  public async init() {
+  public async init(): Promise<void> {
     this.logger.info('Application initialization');
     this.logger.info(`Get value from env $PORT: ${this.config.get('PORT')}`);
 
     this.logger.info('Init database…');
-    await this._initDb();
+    await this.initDb();
     this.logger.info('Init database completed');
 
     this.logger.info('Init app-level middleware');
-    await this._initMiddleware();
+    this.initMiddleware();
     this.logger.info('App-level middleware initialization completed');
 
     this.logger.info('Init controllers');
-    await this._initControllers();
+    this.initControllers();
     this.logger.info('Controller initialization completed');
 
     this.logger.info('Init exception filters');
-    await this._initExceptionFilters();
-    this.logger.info('Exception filters initialization compleated');
+    this.initExceptionFilters();
+    this.logger.info('Exception filters initialization completed');
 
     this.logger.info('Try to init server…');
-    await this._initServer();
+    this.initServer();
     this.logger.info(`Server started on ${getFullServerPath(this.config.get('HOST'), this.config.get('PORT'))}`);
   }
 }

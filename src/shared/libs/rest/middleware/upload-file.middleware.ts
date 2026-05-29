@@ -3,9 +3,11 @@ import multer, { diskStorage } from 'multer';
 import { extension } from 'mime-types';
 import { nanoid } from 'nanoid';
 import { Middleware } from './middleware.interface.js';
-import { HttpError } from '../index.js';
+import { ErrorType, HttpError } from '../errors/index.js';
 import { StatusCodes } from 'http-status-codes';
 import { mkdirSync } from 'node:fs';
+
+const ALLOWED_IMAGE_MIME_TYPES = ['image/png', 'image/jpg', 'image/jpeg'];
 
 export class UploadFileMiddleware implements Middleware {
   constructor(
@@ -19,32 +21,34 @@ export class UploadFileMiddleware implements Middleware {
     const storage = diskStorage({
       destination: this.uploadDirectory,
       filename: (_req, file, callback) => {
-        const fileExtention = extension(file.mimetype);
+        const fileExtension = extension(file.mimetype);
 
-        if (!fileExtention) {
+        if (!fileExtension) {
           callback(new HttpError(
             StatusCodes.BAD_REQUEST,
             `Cannot resolve extension for mimetype ${file.mimetype}`,
             'UploadFileMiddleware',
+            ErrorType.Validation
           ), '');
           return;
         }
 
         const filename = nanoid();
-        callback(null, `${filename}.${fileExtention}`);
+        callback(null, `${filename}.${fileExtension}`);
       }
     });
 
     const uploadSingleFileMiddleware = multer({
       storage,
       fileFilter: (_req, file, callback) => {
-        const isAllowed = ['image/png', 'image/jpg', 'image/jpeg'].includes(file.mimetype);
+        const isAllowed = ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype);
 
         if (!isAllowed) {
           callback(new HttpError(
             StatusCodes.BAD_REQUEST,
             'Only .png and .jpg images are allowed',
             'UploadFileMiddleware',
+            ErrorType.Validation
           ));
           return;
         }

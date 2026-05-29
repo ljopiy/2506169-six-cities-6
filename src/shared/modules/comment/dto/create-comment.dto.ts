@@ -1,18 +1,26 @@
-import { IsString, Min, Max, Length, IsInt } from 'class-validator';
+import { IsDefined, IsString, Min, Max, Length, IsInt, IsMongoId } from 'class-validator';
 import { CreateCommentMessages } from './create-comment.messages.js';
+import { CommentRating, CommentText } from '../comment.constant.js';
 
 export class CreateCommentDto {
+  @IsDefined({ message: CreateCommentMessages.text.requiredField })
   @IsString({ message: CreateCommentMessages.text.invalidFormat })
-  @Length(5, 1024, { message: CreateCommentMessages.text.lengthField })
+  @Length(CommentText.MIN_LENGTH, CommentText.MAX_LENGTH, { message: CreateCommentMessages.text.lengthField })
   public text!: string;
 
+  @IsDefined({ message: CreateCommentMessages.rating.requiredField })
   @IsInt({ message: CreateCommentMessages.rating.invalidFormat })
-  @Min(1, { message: CreateCommentMessages.rating.rangeField })
-  @Max(5, { message: CreateCommentMessages.rating.rangeField })
+  @Min(CommentRating.MIN, { message: CreateCommentMessages.rating.rangeField })
+  @Max(CommentRating.MAX, { message: CreateCommentMessages.rating.rangeField })
   public rating!: number;
 }
 
 export class CreateCommentServiceDto extends CreateCommentDto {
-  offerId: string;
-  authorId: string;
+  @IsDefined({ message: CreateCommentMessages.offerId.requiredField })
+  @IsMongoId({ message: CreateCommentMessages.offerId.invalidFormat })
+  public offerId!: string;
+
+  @IsDefined({ message: CreateCommentMessages.authorId.requiredField })
+  @IsMongoId({ message: CreateCommentMessages.authorId.invalidFormat })
+  public authorId!: string;
 }

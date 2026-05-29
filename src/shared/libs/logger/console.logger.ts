@@ -8,7 +8,10 @@ export class ConsoleLogger implements Logger {
 
   public error(message: string, error: Error, ...args: unknown[]): void {
     console.error(message, ...args);
-    console.error(`Error message: ${getErrorMessage(error)}`);
+
+    if (error instanceof Error) {
+      console.error(`Error message: ${getErrorMessage(error)}`);
+    }
   }
 
   public info(message: string, ...args: unknown[]): void {

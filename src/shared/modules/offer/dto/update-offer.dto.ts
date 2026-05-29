@@ -17,16 +17,25 @@ import {
 import { CityName, Convenience, OfferType, Coordinates } from '../../../types/index.js';
 import { OfferValidationMessages } from './offer.messages.js';
 import { CoordinatesDto } from './coordinates-offer.dto.js';
+import {
+  MIN_CONVENIENCES_COUNT,
+  OfferDescription,
+  OfferGuest,
+  OfferImage,
+  OfferPrice,
+  OfferRoom,
+  OfferTitle
+} from '../offer.constant.js';
 
 export class UpdateOfferDto {
   @IsOptional()
   @IsString({ message: OfferValidationMessages.title.invalidFormat })
-  @Length(10, 100, { message: OfferValidationMessages.title.lengthField })
+  @Length(OfferTitle.MIN_LENGTH, OfferTitle.MAX_LENGTH, { message: OfferValidationMessages.title.lengthField })
   public title?: string;
 
   @IsOptional()
   @IsString({ message: OfferValidationMessages.description.invalidFormat })
-  @Length(20, 1024, { message: OfferValidationMessages.description.lengthField })
+  @Length(OfferDescription.MIN_LENGTH, OfferDescription.MAX_LENGTH, { message: OfferValidationMessages.description.lengthField })
   public description?: string;
 
   @IsOptional()
@@ -39,8 +48,8 @@ export class UpdateOfferDto {
 
   @IsOptional()
   @IsArray({ message: OfferValidationMessages.images.invalidFormat })
-  @ArrayMinSize(6, { message: OfferValidationMessages.images.countField })
-  @ArrayMaxSize(6, { message: OfferValidationMessages.images.countField })
+  @ArrayMinSize(OfferImage.MIN_COUNT, { message: OfferValidationMessages.images.countField })
+  @ArrayMaxSize(OfferImage.MAX_COUNT, { message: OfferValidationMessages.images.countField })
   @IsUrl({}, { each: true, message: OfferValidationMessages.images.invalidFormat })
   public images?: string[];
 
@@ -54,26 +63,26 @@ export class UpdateOfferDto {
 
   @IsOptional()
   @IsInt({ message: OfferValidationMessages.roomsCount.invalidFormat })
-  @Min(1, { message: OfferValidationMessages.roomsCount.rangeField })
-  @Max(8, { message: OfferValidationMessages.roomsCount.rangeField })
+  @Min(OfferRoom.MIN, { message: OfferValidationMessages.roomsCount.rangeField })
+  @Max(OfferRoom.MAX, { message: OfferValidationMessages.roomsCount.rangeField })
   public roomsCount?: number;
 
   @IsOptional()
   @IsInt({ message: OfferValidationMessages.guestsCount.invalidFormat })
-  @Min(1, { message: OfferValidationMessages.guestsCount.rangeField })
-  @Max(10, { message: OfferValidationMessages.guestsCount.rangeField })
+  @Min(OfferGuest.MIN, { message: OfferValidationMessages.guestsCount.rangeField })
+  @Max(OfferGuest.MAX, { message: OfferValidationMessages.guestsCount.rangeField })
   public guestsCount?: number;
 
   @IsOptional()
   @IsInt({ message: OfferValidationMessages.price.invalidFormat })
-  @Min(100, { message: OfferValidationMessages.price.rangeField })
-  @Max(100000, { message: OfferValidationMessages.price.rangeField })
+  @Min(OfferPrice.MIN, { message: OfferValidationMessages.price.rangeField })
+  @Max(OfferPrice.MAX, { message: OfferValidationMessages.price.rangeField })
   public price?: number;
 
   @IsOptional()
   @IsArray({ message: OfferValidationMessages.conveniences.invalidFormat })
-  @ArrayMinSize(1, { message: OfferValidationMessages.conveniences.invalidFormat })
-  @IsEnum(Convenience, { each: true, message: OfferValidationMessages.conveniences.invalidFormat })
+  @ArrayMinSize(MIN_CONVENIENCES_COUNT, { message: OfferValidationMessages.conveniences.invalidFormat })
+  @IsEnum(Convenience, { each: true, message: OfferValidationMessages.conveniences.invalidFormatElement })
   public conveniences?: Convenience[];
 
   @IsOptional()

@@ -5,6 +5,8 @@ import asyncHandler from 'express-async-handler';
 import { Controller } from './controller.interface.js';
 import { Logger } from '../../logger/index.js';
 import { Route } from '../types/route.interface.js';
+import { HttpError } from '../errors/http-error.js';
+import { ErrorType } from '../errors/error-type.enum.js';
 
 const DEFAULT_CONTENT_TYPE = 'application/json';
 
@@ -18,17 +20,15 @@ export abstract class BaseController implements Controller {
     this._router = Router();
   }
 
-  get router() {
+  get router(): Router {
     return this._router;
   }
 
-  public addRoute(route: Route) {
+  public addRoute(route: Route): void {
     const wrapperAsyncHandler = asyncHandler(route.handler.bind(this));
-    const middlewareHandlers = route.middlewares?.map(
-      (item) => asyncHandler(item.execute.bind(item))
-    );
-    const allHandlers = middlewareHandlers ? [...middlewareHandlers, wrapperAsyncHandler] : wrapperAsyncHandler;
-    this._router[route.method](route.path, allHandlers);
+    const middlewareHandlers = route.middlewares?.map((middleware) => asyncHandler(middleware.execute.bind(middleware)));
+    const routeHandlers = middlewareHandlers ? [...middlewareHandlers, wrapperAsyncHandler] : wrapperAsyncHandler;
+    this._router[route.method](route.path, routeHandlers);
     this.logger.info(`Route registered: ${route.method.toUpperCase()} ${route.path}`);
   }
 
@@ -43,11 +43,62 @@ export abstract class BaseController implements Controller {
     this.send(res, StatusCodes.CREATED, data);
   }
 
-  public noContent<T>(res: Response, data: T): void {
-    this.send(res, StatusCodes.NO_CONTENT, data);
+  public noContent(res: Response): void {
+    res.status(StatusCodes.NO_CONTENT).send();
   }
 
   public ok<T>(res: Response, data: T): void {
     this.send(res, StatusCodes.OK, data);
+  }
+
+  protected getCurrentUserId(req: { tokenPayload?: { id: string } }): string | undefined {
+    return req.tokenPayload?.id;
+  }
+
+  protected getRequiredUserId(req: { tokenPayload?: { id: string } }, source: string): string {
+    const userId = this.getCurrentUserId(req);
+
+    if (!userId) {
+      throw new HttpError(
+        StatusCodes.UNAUTHORIZED,
+        'Unauthorized user',
+        source,
+        ErrorType.Authorization
+      );
+    }
+
+    return userId;
+  }
+
+  protected extractStringParam(param: unknown, name: string, source: string): string {
+    const value = Array.isArray(param) ? param[0] : param;
+
+    if (typeof value !== 'string') {
+      throw new HttpError(
+        StatusCodes.BAD_REQUEST,
+        `${name} is invalid`,
+        source,
+        ErrorType.Validation
+      );
+    }
+
+    return value.trim();
+  }
+
+  protected requireDocument<T>(
+    document: T | null,
+    entityName: string,
+    action: string,
+    source: string
+  ): T {
+    if (document === null) {
+      throw new HttpError(
+        StatusCodes.NOT_FOUND,
+        `${entityName} is not found (${action}).`,
+        source,
+      );
+    }
+
+    return document;
   }
 }

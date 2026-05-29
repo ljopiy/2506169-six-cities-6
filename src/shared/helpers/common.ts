@@ -24,17 +24,11 @@ export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '';
 }
 
-export function fillDTO<T, V>(someDto: ClassConstructor<T>, plainObject: V) {
+export function fillDTO<T, V>(someDto: ClassConstructor<T>, plainObject: V): T | T[] {
   return plainToInstance(someDto, plainObject, { excludeExtraneousValues: true });
 }
 
-export function createErrorObject(message: string) {
-  return {
-    error: message,
-  };
-}
-
-export function getFullServerPath(host: string, port: number) {
+export function getFullServerPath(host: string, port: number): string {
   return `http://${host}:${port}`;
 }
 

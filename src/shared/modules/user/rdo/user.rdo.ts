@@ -1,4 +1,5 @@
-import { Expose } from 'class-transformer';
+import { Expose, Transform } from 'class-transformer';
+import { AVATAR_DEFAULT_PATH } from '../user.constant.js';
 
 export class UserRdo {
   @Expose()
@@ -11,6 +12,7 @@ export class UserRdo {
   public email!: string;
 
   @Expose()
+  @Transform(({ value }) => value ?? AVATAR_DEFAULT_PATH, { toClassOnly: true })
   public avatarPath!: string;
 
   @Expose()

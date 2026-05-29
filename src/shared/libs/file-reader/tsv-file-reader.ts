@@ -1,25 +1,29 @@
 import EventEmitter from 'node:events';
-import { createReadStream } from 'node:fs';
+import { ReadStream, createReadStream } from 'node:fs';
 import { FileReader } from './file-reader.interface.js';
+import { TSVFileReaderEvent } from './file-reader.constant.js';
+import { ENCODING } from '../../../cli/cli.constant.js';
 
 const CHUNK_SIZE = 16384;
 
 export class TSVFileReader extends EventEmitter implements FileReader {
-  constructor(private readonly filename: string) {
+  private stream: ReadStream;
+
+  constructor(private readonly filePath: string) {
     super();
+
+    this.stream = createReadStream(this.filePath, {
+      encoding: ENCODING,
+      highWaterMark: CHUNK_SIZE
+    });
   }
 
   public async read(): Promise<void> {
-    const readStream = createReadStream(this.filename, {
-      highWaterMark: CHUNK_SIZE,
-      encoding: 'utf-8',
-    });
-
     let remainingData = '';
     let nextLinePosition = -1;
     let importedRowCount = 0;
 
-    for await (const chunk of readStream) {
+    for await (const chunk of this.stream) {
       remainingData += chunk.toString();
 
       while ((nextLinePosition = remainingData.indexOf('\n')) >= 0) {
@@ -28,7 +32,7 @@ export class TSVFileReader extends EventEmitter implements FileReader {
         importedRowCount++;
 
         await new Promise((resolve) => {
-          this.emit('line', completeRow, resolve);
+          this.emit(TSVFileReaderEvent.Row, completeRow, resolve);
         });
       }
     }
@@ -36,10 +40,10 @@ export class TSVFileReader extends EventEmitter implements FileReader {
     if (remainingData.length > 0) {
       importedRowCount++;
       await new Promise((resolve) => {
-        this.emit('line', remainingData, resolve);
+        this.emit(TSVFileReaderEvent.Row, remainingData, resolve);
       });
     }
 
-    this.emit('end', importedRowCount);
+    this.emit(TSVFileReaderEvent.End, importedRowCount);
   }
 }

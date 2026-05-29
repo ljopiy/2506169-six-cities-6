@@ -2,7 +2,11 @@ import { injectable } from 'inversify';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Command } from './command.interface.js';
+import { COMMAND_BEGINNING, ENCODING } from '../cli.constant.js';
 import chalk from 'chalk';
+
+const COMMAND_NAME = `${COMMAND_BEGINNING}version`;
+const PACKAGE_JSON_FILEPATH = './package.json';
 
 type PackageJSONConfig = {
   version: string;
@@ -20,22 +24,11 @@ function isPackageJSONConfig(value: unknown): value is PackageJSONConfig {
 @injectable()
 export class VersionCommand implements Command {
   constructor(
-    private readonly filePath: string = './package.json'
-  ) {}
-
-  private readVersion(): string {
-    const jsonContent = readFileSync(resolve(this.filePath), 'utf-8');
-    const importedContent: unknown = JSON.parse(jsonContent);
-
-    if (!isPackageJSONConfig(importedContent)) {
-      throw new Error('Failed to parse json content.');
-    }
-
-    return importedContent.version;
-  }
+    private readonly filePath: string = PACKAGE_JSON_FILEPATH
+  ) { }
 
   public getName(): string {
-    return '--version';
+    return COMMAND_NAME;
   }
 
   public async execute(..._parameters: string[]): Promise<void> {
@@ -49,5 +42,16 @@ export class VersionCommand implements Command {
         console.error(chalk.red(error.message));
       }
     }
+  }
+
+  private readVersion(): string {
+    const jsonContent = readFileSync(resolve(this.filePath), ENCODING);
+    const importedContent: unknown = JSON.parse(jsonContent);
+
+    if (!isPackageJSONConfig(importedContent)) {
+      throw new Error('Failed to parse json content.');
+    }
+
+    return importedContent.version;
   }
 }

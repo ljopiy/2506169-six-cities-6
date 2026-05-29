@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import {
   BaseController,
   AnonymousRouteMiddleware,
+  ErrorType,
   HttpError,
   HttpMethod,
   PrivateRouteMiddleware,
@@ -23,7 +24,11 @@ import { UserRdo } from './rdo/user.rdo.js';
 import { AuthService } from '../auth/index.js';
 import { LoggedUserRdo } from './rdo/logged-user.rdo.js';
 import { UploadUserAvatarRdo } from './rdo/upload-user-avatar.rdo.js';
-import { unlink } from 'node:fs/promises';
+import { removeFileIfExists } from '../../helpers/file-system.js';
+import { AVATAR_DEFAULT_PATH } from './user.constant.js';
+
+const CONTROLLER_NAME = 'UserController';
+const USER_AVATAR_FIELD_NAME = 'avatar';
 
 @injectable()
 export class UserController extends BaseController {
@@ -42,7 +47,7 @@ export class UserController extends BaseController {
       handler: this.create,
       middlewares: [
         new AnonymousRouteMiddleware(),
-        new UploadFileMiddleware(this.configService.get('UPLOAD_DIRECTORY'), 'avatar'),
+        new UploadFileMiddleware(this.configService.get('UPLOAD_FILES_DIRECTORY'), USER_AVATAR_FIELD_NAME),
         new ValidateDtoMiddleware(CreateUserDto)
       ]
     });
@@ -60,7 +65,7 @@ export class UserController extends BaseController {
       handler: this.uploadAvatar,
       middlewares: [
         new PrivateRouteMiddleware(),
-        new UploadFileMiddleware(this.configService.get('UPLOAD_DIRECTORY'), 'avatar'),
+        new UploadFileMiddleware(this.configService.get('UPLOAD_FILES_DIRECTORY'), USER_AVATAR_FIELD_NAME),
       ]
     });
     this.addRoute({
@@ -78,7 +83,7 @@ export class UserController extends BaseController {
     res: Response,
   ): Promise<void> {
     const createUserPayload = req.file
-      ? { ...req.body, avatarPath: `/upload/${req.file.filename}` }
+      ? { ...req.body, avatarPath: `/${this.configService.get('UPLOAD_FILES_DIRECTORY')}/${req.file.filename}` }
       : req.body;
     const existsUser = await this.userService.findByEmail(createUserPayload.email);
 
@@ -86,8 +91,8 @@ export class UserController extends BaseController {
       await this.removeUploadedAvatar(req.file?.path);
       throw new HttpError(
         StatusCodes.CONFLICT,
-        `User with email «${createUserPayload.email}» exists.`,
-        'UserController'
+        `User with email «${createUserPayload.email}» already exists.`,
+        CONTROLLER_NAME
       );
     }
 
@@ -119,69 +124,91 @@ export class UserController extends BaseController {
     req: Request,
     res: Response,
   ): Promise<void> {
-    const userId = this.getRequiredUserId(req);
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
 
     if (!req.file) {
       throw new HttpError(
         StatusCodes.BAD_REQUEST,
         'Avatar file is required',
-        'UserController',
+        CONTROLLER_NAME,
+        ErrorType.Validation
       );
     }
 
-    const avatarPath = `/upload/${req.file.filename}`;
-    const updatedUser = await this.userService.updateAvatarById(userId, avatarPath);
-
-    if (!updatedUser) {
+    const user = await this.userService.findById(userId);
+    if (!user) {
+      await this.removeUploadedAvatar(req.file.path);
       throw new HttpError(
         StatusCodes.NOT_FOUND,
         'User not found',
-        'UserController',
+        CONTROLLER_NAME,
       );
     }
 
+    const avatarPath = `/${this.configService.get('UPLOAD_FILES_DIRECTORY')}/${req.file.filename}`;
+    const previousAvatarFilePath = this.getPreviousAvatarFilePath(user.avatarPath);
+    let updatedUser;
+    try {
+      updatedUser = await this.userService.updateAvatarById(userId, avatarPath);
+    } catch (error) {
+      await this.removeUploadedAvatar(req.file.path);
+      throw error;
+    }
+
+    if (!updatedUser) {
+      await this.removeUploadedAvatar(req.file.path);
+      throw new HttpError(
+        StatusCodes.NOT_FOUND,
+        'User not found',
+        CONTROLLER_NAME,
+      );
+    }
+
+    await this.removePreviousAvatar(previousAvatarFilePath);
     this.created(res, fillDTO(UploadUserAvatarRdo, { avatarPath }));
   }
 
-  public async checkAuthenticate(req: Request, res: Response) {
-    const userId = this.getRequiredUserId(req);
+  public async checkAuthenticate(req: Request, res: Response): Promise<void> {
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
 
-    const foundedUser = await this.userService.findById(userId);
+    const foundUser = await this.userService.findById(userId);
 
-    if (!foundedUser) {
+    if (!foundUser) {
       throw new HttpError(
         StatusCodes.UNAUTHORIZED,
         'Unauthorized',
-        'UserController'
+        CONTROLLER_NAME,
+        ErrorType.Authorization
       );
     }
 
-    this.ok(res, fillDTO(UserRdo, prepareUser(foundedUser)));
-  }
-
-  private getRequiredUserId(req: Request): string {
-    const userId = req.tokenPayload?.id;
-
-    if (!userId) {
-      throw new HttpError(
-        StatusCodes.UNAUTHORIZED,
-        'Unauthorized',
-        'UserController',
-      );
-    }
-
-    return userId;
+    this.ok(res, fillDTO(UserRdo, prepareUser(foundUser)));
   }
 
   private async removeUploadedAvatar(filePath?: string): Promise<void> {
-    if (!filePath) {
-      return;
+    const isRemoved = await removeFileIfExists(filePath);
+    if (filePath && !isRemoved) {
+      this.logger.warn(`Could not remove uploaded avatar: ${filePath}`);
+    }
+  }
+
+  private getPreviousAvatarFilePath(avatarPath?: string): string | undefined {
+    if (!avatarPath || avatarPath === AVATAR_DEFAULT_PATH) {
+      return undefined;
     }
 
-    try {
-      await unlink(filePath);
-    } catch {
-      this.logger.warn(`Could not remove uploaded avatar: ${filePath}`);
+    const uploadDirectoryPrefix = `/${this.configService.get('UPLOAD_FILES_DIRECTORY')}/`;
+    if (!avatarPath.startsWith(uploadDirectoryPrefix)) {
+      return undefined;
+    }
+
+    return avatarPath.slice(1);
+  }
+
+  private async removePreviousAvatar(filePath?: string): Promise<void> {
+    const isRemoved = await removeFileIfExists(filePath);
+    if (filePath && !isRemoved) {
+      this.logger.warn(`Could not remove previous avatar: ${filePath}`);
     }
   }
 }

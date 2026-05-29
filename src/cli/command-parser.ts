@@ -1,18 +1,20 @@
+import { COMMAND_BEGINNING } from './cli.constant.js';
+
 type ParsedCommand = Record<string, string[]>
 
 export class CommandParser {
   static parse(cliArguments: string[]): ParsedCommand {
     const parsedCommand: ParsedCommand = {};
-    let currentCommand = '';
+    let command = '';
 
-    for (const argument of cliArguments) {
-      if (argument.startsWith('--')) {
+    cliArguments.forEach((argument) => {
+      if (argument.startsWith(COMMAND_BEGINNING)) {
         parsedCommand[argument] = [];
-        currentCommand = argument;
-      } else if (currentCommand && argument) {
-        parsedCommand[currentCommand].push(argument);
+        command = argument;
+      } else if (command && argument) {
+        parsedCommand[command].push(argument);
       }
-    }
+    });
 
     return parsedCommand;
   }

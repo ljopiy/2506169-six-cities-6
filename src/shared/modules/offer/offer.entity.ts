@@ -2,12 +2,25 @@ import { defaultClasses, getModelForClass, modelOptions, prop, Ref } from '@type
 import { CityName, Convenience, OfferType } from '../../types/index.js';
 import type { UserEntity } from '../user/user.entity.js';
 import { CoordinatesSchema } from './coordinates.schema.js';
+import {
+  IS_PREMIUM,
+  IS_FAVORITE,
+  MIN_COMMENTS_COUNT,
+  OfferDescription,
+  OfferEntityConfig,
+  OfferGuest,
+  OfferPrice,
+  OfferRating,
+  OfferRoom,
+  OfferTitle
+} from './offer.constant.js';
+import { UserEntityConfig } from '../user/user.constant.js';
 
 export interface OfferEntity extends defaultClasses.Base { }
 
 @modelOptions({
   schemaOptions: {
-    collection: 'offers',
+    collection: OfferEntityConfig.COLLECTION,
     timestamps: true
   }
 })
@@ -16,8 +29,8 @@ export class OfferEntity extends defaultClasses.TimeStamps {
     required: true,
     type: () => String,
     trim: true,
-    minlength: 10,
-    maxlength: 100
+    minlength: OfferTitle.MIN_LENGTH,
+    maxlength: OfferTitle.MAX_LENGTH
   })
   public title!: string;
 
@@ -25,8 +38,8 @@ export class OfferEntity extends defaultClasses.TimeStamps {
     required: true,
     type: () => String,
     trim: true,
-    minlength: 20,
-    maxlength: 1024
+    minlength: OfferDescription.MIN_LENGTH,
+    maxlength: OfferDescription.MAX_LENGTH
   })
   public description!: string;
 
@@ -60,22 +73,22 @@ export class OfferEntity extends defaultClasses.TimeStamps {
   @prop({
     required: true,
     type: () => Boolean,
-    default: false
+    default: IS_PREMIUM
   })
   public isPremium!: boolean;
 
   @prop({
     type: () => Boolean,
-    default: false
+    default: IS_FAVORITE
   })
   public isFavorite?: boolean;
 
   @prop({
     required: true,
     type: () => Number,
-    min: 0,
-    max: 5,
-    default: 0
+    min: OfferRating.MIN,
+    max: OfferRating.MAX,
+    default: OfferRating.DEFAULT
   })
   public rating!: number;
 
@@ -89,24 +102,24 @@ export class OfferEntity extends defaultClasses.TimeStamps {
   @prop({
     required: true,
     type: () => Number,
-    min: 1,
-    max: 8
+    min: OfferRoom.MIN,
+    max: OfferRoom.MAX
   })
   public roomsCount!: number;
 
   @prop({
     required: true,
     type: () => Number,
-    min: 1,
-    max: 10
+    min: OfferGuest.MIN,
+    max: OfferGuest.MAX
   })
   public guestsCount!: number;
 
   @prop({
     required: true,
     type: () => Number,
-    min: 100,
-    max: 100000
+    min: OfferPrice.MIN,
+    max: OfferPrice.MAX
   })
   public price!: number;
 
@@ -120,13 +133,13 @@ export class OfferEntity extends defaultClasses.TimeStamps {
   @prop({
     type: () => String,
     required: true,
-    ref: 'UserEntity'
+    ref: UserEntityConfig.REF
   })
   public authorId!: Ref<UserEntity>;
 
   @prop({
     type: () => Number,
-    default: 0
+    default: MIN_COMMENTS_COUNT
   })
   public commentsCount!: number;
 

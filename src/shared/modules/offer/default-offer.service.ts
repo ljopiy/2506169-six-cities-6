@@ -10,7 +10,7 @@ import { CommentEntity } from '../comment/comment.entity.js';
 import { CreateOfferServiceDto } from './dto/create-offer.dto.js';
 import { UpdateOfferDto } from './dto/update-offer.dto.js';
 import { extractRefId } from '../../helpers/index.js';
-import { DEFAULT_OFFER_COUNT, DEFAULT_PREMIUM_OFFER_COUNT } from './offer.constant.js';
+import { DEFAULT_OFFER_COUNT, MAX_PREMIUM_OFFER_COUNT } from './offer.constant.js';
 
 @injectable()
 export class DefaultOfferService implements OfferService {
@@ -22,10 +22,11 @@ export class DefaultOfferService implements OfferService {
   ) { }
 
   public async create(dto: CreateOfferServiceDto): Promise<DocumentType<OfferEntity>> {
-    const result = await this.offerModel.create(dto);
+    const offer = await this.offerModel.create(dto);
+
     this.logger.info(`New offer created: ${dto.title}`);
 
-    return result.populate('authorId');
+    return offer.populate('authorId');
   }
 
   public async findById(offerId: string): Promise<DocumentType<OfferEntity> | null> {
@@ -45,7 +46,7 @@ export class DefaultOfferService implements OfferService {
   }
 
   public async findPremiumByCity(city: string): Promise<DocumentType<OfferEntity>[]> {
-    return this.offerModel.find({ 'city': city, isPremium: true }).populate('authorId').sort({ postDate: SortType.Down }).limit(DEFAULT_PREMIUM_OFFER_COUNT).exec();
+    return this.offerModel.find({ 'city': city, isPremium: true }).populate('authorId').sort({ postDate: SortType.Down }).limit(MAX_PREMIUM_OFFER_COUNT).exec();
   }
 
   public async incCommentCount(offerId: string): Promise<void> {

@@ -11,12 +11,35 @@ import { Config, RestConfig, RestSchema } from '../shared/libs/config/index.js';
 import { DatabaseClient, MongoDatabaseClient } from '../shared/libs/database-client/index.js';
 
 export function createCliApplicationContainer(container: Container): void {
-  container.bind<CLIApplication>(Component.CliApplication).to(CLIApplication).inSingletonScope();
-  container.bind<Logger>(Component.Logger).to(ConsoleLogger).inSingletonScope();
-  container.bind<HelpCommand>(Component.HelpCommand).to(HelpCommand).inSingletonScope();
-  container.bind<VersionCommand>(Component.VersionCommand).to(VersionCommand).inSingletonScope();
-  container.bind<ImportCommand>(Component.ImportCommand).to(ImportCommand).inSingletonScope();
-  container.bind<GenerateCommand>(Component.GenerateCommand).to(GenerateCommand).inSingletonScope();
-  container.bind<Config<RestSchema>>(Component.Config).to(RestConfig).inSingletonScope();
-  container.bind<DatabaseClient>(Component.DatabaseClient).to(MongoDatabaseClient).inSingletonScope();
+  container.bind<CLIApplication>(Component.CliApplication)
+    .to(CLIApplication)
+    .inSingletonScope();
+
+  container.bind<Logger>(Component.Logger)
+    .to(ConsoleLogger)
+    .inSingletonScope();
+
+  container.bind<HelpCommand>(Component.HelpCommand)
+    .to(HelpCommand)
+    .inSingletonScope();
+
+  container.bind<VersionCommand>(Component.VersionCommand)
+    .to(VersionCommand)
+    .inSingletonScope();
+
+  container.bind<ImportCommand>(Component.ImportCommand)
+    .to(ImportCommand)
+    .inSingletonScope();
+
+  container.bind<GenerateCommand>(Component.GenerateCommand)
+    .to(GenerateCommand)
+    .inSingletonScope();
+
+  container.bind<Config<RestSchema>>(Component.Config)
+    .to(RestConfig)
+    .inSingletonScope();
+
+  container.bind<DatabaseClient>(Component.DatabaseClient)
+    .to(MongoDatabaseClient)
+    .inSingletonScope();
 }

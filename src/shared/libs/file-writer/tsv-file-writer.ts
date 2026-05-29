@@ -1,6 +1,7 @@
 import { WriteStream } from 'node:fs';
 import { createWriteStream } from 'node:fs';
 import { FileWriter } from './file-writer.interface.js';
+import { ENCODING } from '../../../cli/cli.constant.js';
 
 export class TSVFileWriter implements FileWriter {
   private stream: WriteStream;
@@ -8,14 +9,14 @@ export class TSVFileWriter implements FileWriter {
   constructor(filename: string) {
     this.stream = createWriteStream(filename, {
       flags: 'w',
-      encoding: 'utf-8',
+      encoding: ENCODING,
       autoClose: true,
     });
   }
 
   public async write(row: string): Promise<unknown> {
-    const writeSuccess = this.stream.write(`${row}\n`);
-    if (! writeSuccess) {
+    const isWriteSuccess = this.stream.write(`${row}\n`);
+    if (!isWriteSuccess) {
       return new Promise((resolve) => {
         this.stream.once('drain', () => resolve(true));
       });

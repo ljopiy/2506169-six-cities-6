@@ -1,4 +1,4 @@
-import { City, CityName } from '../types/index.js';
+import { City, CityName } from '../../types/index.js';
 
 export const Cities: Record<CityName, City> = {
   [CityName.Paris]: {

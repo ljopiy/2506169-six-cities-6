@@ -1,6 +1,7 @@
 import {
   BaseController,
   DocumentExistsMiddleware,
+  ErrorType,
   HttpError,
   HttpMethod,
   PrivateRouteMiddleware,
@@ -24,7 +25,19 @@ import { CreateOfferRequest } from './types/create-offer-request.type.js';
 import { UpdateOfferRequest } from './types/update-offer-request.type.js';
 import { DocumentType } from '@typegoose/typegoose';
 import { OfferEntity } from './offer.entity.js';
-import { TokenPayload } from '../auth/index.js';
+
+const CONTROLLER_NAME = 'OfferController';
+const OFFER_ENTITY_NAME = 'Offer';
+const OFFER_ID_PARAM_NAME = 'offerId';
+const OFFER_CITY_PARAM_NAME = 'city';
+
+const enum OfferAction {
+  Show = 'show',
+  Update = 'update',
+  AddToFavorite = 'addToFavorite',
+  DeleteFromFavorite = 'deleteFromFavorite',
+  EnsureOwner = 'ensureOwner',
+}
 
 @injectable()
 export default class OfferController extends BaseController {
@@ -37,7 +50,8 @@ export default class OfferController extends BaseController {
     super(logger);
 
     this.logger.info('Register routes for OfferController');
-    this.addRoute({ path: '/', method: HttpMethod.Get, handler: this.listOffers });
+
+    this.addRoute({ path: '/', method: HttpMethod.Get, handler: this.index });
     this.addRoute({
       path: '/',
       method: HttpMethod.Post,
@@ -62,8 +76,8 @@ export default class OfferController extends BaseController {
       handler: this.addToFavorite,
       middlewares: [
         new PrivateRouteMiddleware(),
-        new ValidateObjectIdMiddleware('offerId'),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
+        new ValidateObjectIdMiddleware(OFFER_ID_PARAM_NAME),
+        new DocumentExistsMiddleware(this.offerService, OFFER_ENTITY_NAME, OFFER_ID_PARAM_NAME)
       ]
     });
     this.addRoute({
@@ -72,17 +86,16 @@ export default class OfferController extends BaseController {
       handler: this.deleteFromFavorite,
       middlewares: [
         new PrivateRouteMiddleware(),
-        new ValidateObjectIdMiddleware('offerId'),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
+        new ValidateObjectIdMiddleware(OFFER_ID_PARAM_NAME),
+        new DocumentExistsMiddleware(this.offerService, OFFER_ENTITY_NAME, OFFER_ID_PARAM_NAME)
       ]
     });
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Get,
-      handler: this.getOfferById,
+      handler: this.show,
       middlewares: [
-        new ValidateObjectIdMiddleware('offerId'),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
+        new ValidateObjectIdMiddleware(OFFER_ID_PARAM_NAME)
       ]
     });
     this.addRoute({
@@ -91,9 +104,8 @@ export default class OfferController extends BaseController {
       handler: this.update,
       middlewares: [
         new PrivateRouteMiddleware(),
-        new ValidateObjectIdMiddleware('offerId'),
-        new ValidateDtoMiddleware(UpdateOfferDto),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
+        new ValidateObjectIdMiddleware(OFFER_ID_PARAM_NAME),
+        new ValidateDtoMiddleware(UpdateOfferDto)
       ]
     });
     this.addRoute({
@@ -102,171 +114,152 @@ export default class OfferController extends BaseController {
       handler: this.delete,
       middlewares: [
         new PrivateRouteMiddleware(),
-        new ValidateObjectIdMiddleware('offerId'),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
+        new ValidateObjectIdMiddleware(OFFER_ID_PARAM_NAME)
       ]
     });
+  }
+
+  public async show(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    const offerId = this.extractStringParam(req.params.offerId, OFFER_ID_PARAM_NAME, CONTROLLER_NAME);
+    const userId = this.getCurrentUserId(req);
+
+    const [mappedOffer] = await this.mapForUser([await this.findByIdOrThrow(offerId, OfferAction.Show)], userId);
+    this.ok(res, fillDTO(OfferRdo, mappedOffer));
+  }
+
+  public async index(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    const limit = OfferController.extractLimit(req.query.limit);
+    const offers = await this.offerService.find(limit);
+    const userId = this.getCurrentUserId(req);
+
+    this.ok(res, fillDTO(OfferPreviewRdo, await this.mapForUser(offers, userId)));
   }
 
   public async create(
     req: CreateOfferRequest,
     res: Response
   ): Promise<void> {
-    const userId = this.getRequiredUserId(req);
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
     const result = await this.offerService.create({
       ...req.body,
+      isFavorite: false,
       rating: 0,
       authorId: userId,
       commentsCount: 0,
     });
 
-    const [mappedOffer] = await this.mapOffersForUser([result], userId);
+    const [mappedOffer] = await this.mapForUser([result], userId);
     this.created(res, fillDTO(OfferRdo, mappedOffer));
-  }
-
-  public async listOffers(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    const limit = this.extractLimit(req.query.limit);
-    const offers = await this.offerService.find(limit);
-    const userId = this.getCurrentUserId(req);
-
-    this.ok(res, fillDTO(OfferPreviewRdo, await this.mapOffersForUser(offers, userId)));
-  }
-
-  public async getOfferById(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    const offerId = this.extractParam(req.params.offerId, 'offerId');
-    const existingOffer = await this.offerService.findById(offerId);
-    const userId = this.getCurrentUserId(req);
-
-    const [mappedOffer] = await this.mapOffersForUser([this.requireDocument(existingOffer, 'show')], userId);
-    this.ok(res, fillDTO(OfferRdo, mappedOffer));
-  }
-
-  public async update(
-    req: UpdateOfferRequest,
-    res: Response
-  ): Promise<void> {
-    const offerId = this.extractParam(req.params.offerId, 'offerId');
-    const userId = this.getRequiredUserId(req);
-
-    await this.ensureOfferOwner(offerId, userId);
-
-    const result = await this.offerService.updateById(offerId, req.body);
-    const [mappedOffer] = await this.mapOffersForUser([this.requireDocument(result, 'update')], userId);
-    this.ok(res, fillDTO(OfferRdo, mappedOffer));
   }
 
   public async delete(
     req: Request,
     res: Response
   ): Promise<void> {
-    const offerId = this.extractParam(req.params.offerId, 'offerId');
-    const userId = this.getRequiredUserId(req);
+    const offerId = this.extractStringParam(req.params.offerId, OFFER_ID_PARAM_NAME, CONTROLLER_NAME);
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
 
-    await this.ensureOfferOwner(offerId, userId);
+    await this.ensureOwner(offerId, userId);
 
     await this.offerService.deleteById(offerId);
     await this.commentService.deleteByOfferId(offerId);
-    this.noContent(res, null);
+    this.noContent(res);
+  }
+
+  public async update(
+    req: UpdateOfferRequest,
+    res: Response
+  ): Promise<void> {
+    const offerId = this.extractStringParam(req.params.offerId, OFFER_ID_PARAM_NAME, CONTROLLER_NAME);
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
+
+    await this.ensureOwner(offerId, userId);
+
+    const result = await this.offerService.updateById(offerId, req.body);
+    const [mappedOffer] = await this.mapForUser(
+      [this.requireDocument(result, OFFER_ENTITY_NAME, OfferAction.Update, CONTROLLER_NAME)],
+      userId
+    );
+    this.ok(res, fillDTO(OfferRdo, mappedOffer));
   }
 
   public async findPremium(
     req: Request,
     res: Response
   ): Promise<void> {
-    const city = this.extractParam(req.params.city, 'city');
+    const city = this.extractStringParam(req.params.city, OFFER_CITY_PARAM_NAME, CONTROLLER_NAME);
 
-    if (!this.isCityName(city)) {
+    if (!OfferController.isCityName(city)) {
       throw new HttpError(
         StatusCodes.BAD_REQUEST,
         `${city} is invalid city`,
-        'OfferController',
+        CONTROLLER_NAME,
+        ErrorType.Validation
       );
     }
 
     const offers = await this.offerService.findPremiumByCity(city);
     const userId = this.getCurrentUserId(req);
 
-    this.ok(res, fillDTO(OfferPreviewRdo, await this.mapOffersForUser(offers, userId)));
+    this.ok(res, fillDTO(OfferPreviewRdo, await this.mapForUser(offers, userId)));
   }
 
   public async findFavorite(
     req: Request,
     res: Response
   ): Promise<void> {
-    const userId = this.getRequiredUserId(req);
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
     const offers = await this.offerService.findFavorite(userId);
-    this.ok(res, fillDTO(OfferPreviewRdo, await this.mapOffersForUser(offers, userId)));
+    this.ok(res, fillDTO(OfferPreviewRdo, await this.mapForUser(offers, userId)));
   }
 
   public async addToFavorite(
     req: Request,
     res: Response
   ): Promise<void> {
-    const offerId = this.extractParam(req.params.offerId, 'offerId');
-    const userId = this.getRequiredUserId(req);
+    const offerId = this.extractStringParam(req.params.offerId, OFFER_ID_PARAM_NAME, CONTROLLER_NAME);
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
 
     await this.offerService.addToFavorite(offerId, userId);
-    const result = await this.offerService.findById(offerId);
-    const [mappedOffer] = await this.mapOffersForUser([this.requireDocument(result, 'addToFavorite')], userId);
-    this.ok(res, fillDTO(OfferRdo, mappedOffer));
+    this.ok(res, fillDTO(OfferRdo, await this.getMappedById(offerId, userId, OfferAction.AddToFavorite)));
   }
 
   public async deleteFromFavorite(
     req: Request,
     res: Response
   ): Promise<void> {
-    const offerId = this.extractParam(req.params.offerId, 'offerId');
-    const userId = this.getRequiredUserId(req);
+    const offerId = this.extractStringParam(req.params.offerId, OFFER_ID_PARAM_NAME, CONTROLLER_NAME);
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
 
     await this.offerService.deleteFromFavorite(offerId, userId);
-    const result = await this.offerService.findById(offerId);
-    const [mappedOffer] = await this.mapOffersForUser([this.requireDocument(result, 'deleteFromFavorite')], userId);
-    this.ok(res, fillDTO(OfferRdo, mappedOffer));
+    this.ok(res, fillDTO(OfferRdo, await this.getMappedById(offerId, userId, OfferAction.DeleteFromFavorite)));
   }
 
-  private getCurrentUserId(req: { tokenPayload?: TokenPayload }): string | undefined {
-    return req.tokenPayload?.id;
-  }
-
-  private getRequiredUserId(req: { tokenPayload?: TokenPayload }): string {
-    const userId = req.tokenPayload?.id;
-
-    if (!userId) {
-      throw new HttpError(
-        StatusCodes.UNAUTHORIZED,
-        'Unauthorized user',
-        'OfferController',
-      );
-    }
-
-    return userId;
-  }
-
-  private async mapOffersForUser(
+  private async mapForUser(
     offers: DocumentType<OfferEntity>[],
     userId?: string
   ): Promise<Array<ReturnType<typeof prepareOffer> & { isFavorite: boolean }>> {
-    const favoriteOfferIds = await this.getFavoriteOfferIdSet(userId);
+    const favoriteIds = await this.getFavoriteIdSet(userId);
 
-    return offers.map((offer) => this.mapOffer(offer, favoriteOfferIds));
+    return offers.map((offer) => this.map(offer, favoriteIds));
   }
 
-  private mapOffer(offer: DocumentType<OfferEntity>, favoriteOfferIds: Set<string>) {
+  private map(offer: DocumentType<OfferEntity>, favoriteIds: Set<string>) {
     const preparedOffer = prepareOffer(offer);
 
     return {
       ...preparedOffer,
-      isFavorite: favoriteOfferIds.has(String(offer._id))
+      isFavorite: favoriteIds.has(String(offer._id))
     };
   }
 
-  private async getFavoriteOfferIdSet(userId?: string): Promise<Set<string>> {
+  private async getFavoriteIdSet(userId?: string): Promise<Set<string>> {
     if (!userId) {
       return new Set<string>();
     }
@@ -277,51 +270,36 @@ export default class OfferController extends BaseController {
     return new Set<string>(favoriteOffers.map((favoriteOffer) => extractRefId(favoriteOffer)));
   }
 
-  private async ensureOfferOwner(offerId: string, userId: string): Promise<void> {
-    const offer = await this.offerService.findById(offerId);
-    const authorId = extractRefId(this.requireDocument(offer, 'ensureOfferOwner').authorId);
+  private async ensureOwner(offerId: string, userId: string): Promise<void> {
+    const offer = await this.findByIdOrThrow(offerId, OfferAction.EnsureOwner);
+    const authorId = extractRefId(offer.authorId);
 
     if (authorId !== userId) {
       throw new HttpError(
         StatusCodes.FORBIDDEN,
         'Only the author can manage this offer',
-        'OfferController',
+        CONTROLLER_NAME,
+        ErrorType.Authorization
       );
     }
   }
 
-  private extractParam(param: unknown, name: string): string {
-    const value = Array.isArray(param) ? param[0] : param;
-
-    if (typeof value !== 'string') {
-      throw new HttpError(
-        StatusCodes.BAD_REQUEST,
-        `${name} is invalid`,
-        'OfferController',
-      );
-    }
-
-    return value.trim();
-  }
-
-  private extractLimit(limitParam: unknown): number | undefined {
+  private static extractLimit(limitParam: unknown): number | undefined {
     const limit = Number(Array.isArray(limitParam) ? limitParam[0] : limitParam);
     return Number.isNaN(limit) || limit <= 0 ? undefined : limit;
   }
 
-  private isCityName(city: string): city is CityName {
+  private static isCityName(city: string): city is CityName {
     return Object.values(CityName).some((cityName) => cityName === city);
   }
 
-  private requireDocument<T>(document: T | null, action: string): T {
-    if (document === null) {
-      throw new HttpError(
-        StatusCodes.NOT_FOUND,
-        `Offer is not found (${action}).`,
-        'OfferController',
-      );
-    }
+  private async getMappedById(offerId: string, userId: string, action: OfferAction) {
+    const [mappedOffer] = await this.mapForUser([await this.findByIdOrThrow(offerId, action)], userId);
+    return mappedOffer;
+  }
 
-    return document;
+  private async findByIdOrThrow(offerId: string, action: OfferAction): Promise<DocumentType<OfferEntity>> {
+    const offer = await this.offerService.findById(offerId);
+    return this.requireDocument(offer, OFFER_ENTITY_NAME, action, CONTROLLER_NAME);
   }
 }

@@ -5,16 +5,18 @@ convict.addFormats(validator);
 
 export type RestSchema = {
   PORT: number;
+  HOST: string;
   SALT: string;
   DB_HOST: string;
   DB_USER: string;
   DB_PASSWORD: string;
   DB_PORT: string;
   DB_NAME: string;
-  UPLOAD_DIRECTORY: string;
+  UPLOAD_FILES_DIRECTORY: string;
+  STATIC_FILES_DIRECTORY: string;
   JWT_SECRET: string;
-  HOST: string;
-  STATIC_DIRECTORY_PATH: string;
+  JWT_ALGORITHM: string;
+  JWT_EXPIRED: string;
 }
 
 export const configRestSchema = convict<RestSchema>({
@@ -23,6 +25,12 @@ export const configRestSchema = convict<RestSchema>({
     format: 'port',
     env: 'PORT',
     default: 4000
+  },
+  HOST: {
+    doc: 'Host where started service',
+    format: String,
+    env: 'HOST',
+    default: 'localhost'
   },
   SALT: {
     doc: 'Salt for password hash',
@@ -60,11 +68,17 @@ export const configRestSchema = convict<RestSchema>({
     env: 'DB_NAME',
     default: 'six-cities'
   },
-  UPLOAD_DIRECTORY: {
+  UPLOAD_FILES_DIRECTORY: {
     doc: 'Directory for upload files',
     format: String,
-    env: 'UPLOAD_DIRECTORY',
+    env: 'UPLOAD_FILES_DIRECTORY',
     default: 'upload'
+  },
+  STATIC_FILES_DIRECTORY: {
+    doc: 'Path to directory with static resources',
+    format: String,
+    env: 'STATIC_FILES_DIRECTORY',
+    default: 'static'
   },
   JWT_SECRET: {
     doc: 'Secret for sign JWT',
@@ -72,16 +86,16 @@ export const configRestSchema = convict<RestSchema>({
     env: 'JWT_SECRET',
     default: null
   },
-  HOST: {
-    doc: 'Host where started service',
+  JWT_ALGORITHM: {
+    doc: 'JWT signing algorithm',
     format: String,
-    env: 'HOST',
-    default: 'localhost'
+    env: 'JWT_ALGORITHM',
+    default: 'HS256'
   },
-  STATIC_DIRECTORY_PATH: {
-    doc: 'Path to directory with static resources',
+  JWT_EXPIRED: {
+    doc: 'JWT expiration time (for example 2d, 12h)',
     format: String,
-    env: 'STATIC_DIRECTORY_PATH',
-    default: 'static'
+    env: 'JWT_EXPIRED',
+    default: '2d'
   },
 });

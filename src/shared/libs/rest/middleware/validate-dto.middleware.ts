@@ -1,13 +1,21 @@
 import { NextFunction, Request, Response } from 'express';
 import { ClassConstructor, plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
+import { ValidationError, validate } from 'class-validator';
 import { Middleware } from './middleware.interface.js';
-import { HttpError } from '../index.js';
+import { ErrorType, HttpError } from '../errors/index.js';
 import { StatusCodes } from 'http-status-codes';
-import { unlink } from 'node:fs/promises';
+import { removeFileIfExists } from '../../../helpers/file-system.js';
 
 export class ValidateDtoMiddleware implements Middleware {
   constructor(private dto: ClassConstructor<object>) {}
+
+  private static getMessages(errors: ValidationError[]): string[] {
+    return errors.flatMap((error) => {
+      const messages = Object.values(error.constraints ?? {});
+      const childMessages = ValidateDtoMiddleware.getMessages(error.children ?? []);
+      return [...messages, ...childMessages];
+    });
+  }
 
   public async execute(req: Request, _res: Response, next: NextFunction): Promise<void> {
     const dtoInstance = plainToInstance(this.dto, req.body);
@@ -17,31 +25,18 @@ export class ValidateDtoMiddleware implements Middleware {
     });
 
     if (errors.length > 0) {
-      await this.removeUploadedFile(req.file?.path);
-      const message = errors
-        .flatMap((error) => Object.values(error.constraints ?? {}))
-        .join('; ') || 'Validation failed';
+      await removeFileIfExists(req.file?.path);
+      const message = ValidateDtoMiddleware.getMessages(errors).join('; ') || 'Validation failed';
 
       throw new HttpError(
         StatusCodes.BAD_REQUEST,
         message,
-        'ValidateDtoMiddleware'
+        'ValidateDtoMiddleware',
+        ErrorType.Validation
       );
     }
 
     req.body = dtoInstance;
     next();
-  }
-
-  private async removeUploadedFile(filePath?: string): Promise<void> {
-    if (!filePath) {
-      return;
-    }
-
-    try {
-      await unlink(filePath);
-    } catch {
-      // ignore error
-    }
   }
 }

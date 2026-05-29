@@ -1,11 +1,9 @@
 import { inject, injectable } from 'inversify';
 import { Response } from 'express';
-import { StatusCodes } from 'http-status-codes';
 import { Logger } from '../../libs/logger/index.js';
 import {
   BaseController,
   DocumentExistsMiddleware,
-  HttpError,
   HttpMethod,
   ValidateDtoMiddleware,
   ValidateObjectIdMiddleware,
@@ -15,9 +13,14 @@ import { Component } from '../../types/index.js';
 import { CommentService } from './comment-service.interface.js';
 import { OfferService } from '../offer/offer-service.interface.js';
 import { CreateCommentRequest } from './types/create-comment-request.type.js';
+import { GetCommentsRequest } from './types/get-comments-request.type.js';
 import { CreateCommentDto } from './dto/create-comment.dto.js';
 import { fillDTO } from '../../helpers/index.js';
 import { CommentRdo } from './rdo/comment.rdo.js';
+
+const CONTROLLER_NAME = 'CommentController';
+const OFFER_ENTITY_NAME = 'Offer';
+const OFFER_ID_PARAM_NAME = 'offerId';
 
 @injectable()
 export class CommentController extends BaseController {
@@ -27,15 +30,16 @@ export class CommentController extends BaseController {
     @inject(Component.OfferService) private readonly offerService: OfferService,
   ) {
     super(logger);
+
     this.logger.info('Register routes for CommentController');
 
     this.addRoute({
       path: '/:offerId/comments',
       method: HttpMethod.Get,
-      handler: this.listComments,
+      handler: this.index,
       middlewares: [
-        new ValidateObjectIdMiddleware('offerId'),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
+        new ValidateObjectIdMiddleware(OFFER_ID_PARAM_NAME),
+        new DocumentExistsMiddleware(this.offerService, OFFER_ENTITY_NAME, OFFER_ID_PARAM_NAME)
       ]
     });
     this.addRoute({
@@ -44,18 +48,18 @@ export class CommentController extends BaseController {
       handler: this.create,
       middlewares: [
         new PrivateRouteMiddleware(),
-        new ValidateObjectIdMiddleware('offerId'),
+        new ValidateObjectIdMiddleware(OFFER_ID_PARAM_NAME),
         new ValidateDtoMiddleware(CreateCommentDto),
-        new DocumentExistsMiddleware(this.offerService, 'Offer', 'offerId')
+        new DocumentExistsMiddleware(this.offerService, OFFER_ENTITY_NAME, OFFER_ID_PARAM_NAME)
       ]
     });
   }
 
-  public async listComments(
-    { params }: CreateCommentRequest,
+  public async index(
+    { params }: GetCommentsRequest,
     res: Response,
   ): Promise<void> {
-    const offerId = this.extractOfferId(params.offerId);
+    const offerId = this.extractStringParam(params.offerId, OFFER_ID_PARAM_NAME, CONTROLLER_NAME);
 
     const comments = await this.commentService.findByOfferId(offerId);
     this.ok(res, fillDTO(CommentRdo, comments));
@@ -65,8 +69,8 @@ export class CommentController extends BaseController {
     req: CreateCommentRequest,
     res: Response,
   ): Promise<void> {
-    const offerId = this.extractOfferId(req.params.offerId);
-    const userId = this.getRequiredUserId(req);
+    const offerId = this.extractStringParam(req.params.offerId, OFFER_ID_PARAM_NAME, CONTROLLER_NAME);
+    const userId = this.getRequiredUserId(req, CONTROLLER_NAME);
 
     const result = await this.commentService.create({
       ...req.body,
@@ -78,31 +82,5 @@ export class CommentController extends BaseController {
     await this.offerService.recalculateRating(offerId);
 
     this.created(res, fillDTO(CommentRdo, result));
-  }
-
-  private getRequiredUserId(req: { tokenPayload?: { id: string } }): string {
-    const userId = req.tokenPayload?.id;
-
-    if (!userId) {
-      throw new HttpError(
-        StatusCodes.UNAUTHORIZED,
-        'Unauthorized user',
-        'CommentController'
-      );
-    }
-
-    return userId;
-  }
-
-  private extractOfferId(offerIdParam: unknown): string {
-    if (typeof offerIdParam !== 'string') {
-      throw new HttpError(
-        StatusCodes.BAD_REQUEST,
-        'offerId is invalid',
-        'CommentController'
-      );
-    }
-
-    return offerIdParam.trim();
   }
 }

@@ -1,2 +1,9 @@
-export const STATIC_UPLOAD_ROUTE = '/upload';
-export const STATIC_FILES_ROUTE = '/static';
+export const enum StaticRoute {
+  UploadFiles = '/upload',
+  AppFiles = '/static',
+}
+
+export const enum Route {
+  Users = '/users',
+  Offers = '/offers',
+}

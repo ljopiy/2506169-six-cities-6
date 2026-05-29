@@ -5,12 +5,14 @@ import { DatabaseClient } from './database-client.interface.js';
 import { Component } from '../../types/index.js';
 import { Logger } from '../logger/index.js';
 
-const RETRY_COUNT = 5;
-const RETRY_TIMEOUT = 1000;
+const RetryConnection = {
+  COUNT: 5,
+  TIMEOUT: 1000
+} as const;
 
 @injectable()
 export class MongoDatabaseClient implements DatabaseClient {
-  private mongoose: typeof Mongoose;
+  private mongooseConnection: typeof Mongoose;
   private isConnected: boolean;
 
   constructor(
@@ -19,7 +21,7 @@ export class MongoDatabaseClient implements DatabaseClient {
     this.isConnected = false;
   }
 
-  public isConnectedToDatabase() {
+  public isConnectedToDatabase(): boolean {
     return this.isConnected;
   }
 
@@ -31,9 +33,9 @@ export class MongoDatabaseClient implements DatabaseClient {
     this.logger.info('Trying to connect to MongoDB…');
 
     let attempt = 0;
-    while (attempt < RETRY_COUNT) {
+    while (attempt < RetryConnection.COUNT) {
       try {
-        this.mongoose = await Mongoose.connect(uri);
+        this.mongooseConnection = await Mongoose.connect(uri);
         this.isConnected = true;
         this.logger.info('Database connection established.');
         return;
@@ -43,11 +45,11 @@ export class MongoDatabaseClient implements DatabaseClient {
           `Failed to connect to the database. Attempt ${attempt}`,
           error instanceof Error ? error : new Error(String(error))
         );
-        await setTimeout(RETRY_TIMEOUT);
+        await setTimeout(RetryConnection.TIMEOUT);
       }
     }
 
-    throw new Error(`Unable to establish database connection after ${RETRY_COUNT}`);
+    throw new Error(`Unable to establish database connection after ${RetryConnection.COUNT}`);
   }
 
   public async disconnect(): Promise<void> {
@@ -55,7 +57,7 @@ export class MongoDatabaseClient implements DatabaseClient {
       throw new Error('Not connected to the database');
     }
 
-    await this.mongoose.disconnect?.();
+    await this.mongooseConnection.disconnect?.();
     this.isConnected = false;
     this.logger.info('Database connection closed.');
   }

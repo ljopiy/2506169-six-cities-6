@@ -2,24 +2,24 @@ import { defaultClasses, getModelForClass, prop, modelOptions, Ref } from '@type
 import { User, UserType } from '../../types/index.js';
 import { createSHA256 } from '../../helpers/index.js';
 import type { OfferEntity } from '../offer/offer.entity.js';
+import { UserEntityConfig, UserName, UserPassword } from './user.constant.js';
+import { OfferEntityConfig } from '../offer/offer.constant.js';
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export interface UserEntity extends defaultClasses.Base { }
 
 @modelOptions({
   schemaOptions: {
-    collection: 'users',
+    collection: UserEntityConfig.COLLECTION,
     timestamps: true
   }
 })
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class UserEntity extends defaultClasses.TimeStamps implements User {
   @prop({
     required: true,
     type: () => String,
     trim: true,
-    minlength: 1,
-    maxlength: 15
+    minlength: UserName.MIN_LENGTH,
+    maxlength: UserName.MAX_LENGTH
   })
   public name!: string;
 
@@ -45,14 +45,14 @@ export class UserEntity extends defaultClasses.TimeStamps implements User {
   @prop({
     required: true,
     type: () => String,
-    minlength: 64,
-    maxlength: 64
+    minlength: UserPassword.HASH_LENGTH,
+    maxlength: UserPassword.HASH_LENGTH
   })
   private password?: string;
 
   @prop({
     type: () => [String],
-    ref: 'OfferEntity',
+    ref: OfferEntityConfig.REF,
     default: [],
   })
   public favoriteOffers!: Ref<OfferEntity>[];
@@ -74,7 +74,7 @@ export class UserEntity extends defaultClasses.TimeStamps implements User {
     return this.password;
   }
 
-  public verifyPassword(password: string, salt: string) {
+  public verifyPassword(password: string, salt: string): boolean {
     const hashPassword = createSHA256(password, salt);
     return hashPassword === this.password;
   }
